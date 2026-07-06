@@ -1,73 +1,68 @@
-# Python virtual environments
+# ── Python ────────────────────────────────────────────────────────────────────
 .venv
-
-# output
-out
-dist
-*.tgz
-.build
-
-# code coverage
-coverage
-*.lcov
-
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
-
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
-.wrangler
-.mintlify
+python/.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 
-# Python backend local environment
-python/.venv/
-
-# OSS sync temp directory
-.oss-sync-temp/
-
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
-.DS_Store
-
-# Claude Code local settings (user-specific)
-.claude/settings.local.json
-
-# Accidental literal tilde directories (Node.js doesn't expand ~)
-~/
-
-# Lock files from other package managers
-pnpm-lock.yaml
-
-# Local runtime data (sessions, credentials, config)
-.agent-runtime/
-
-# SSH keys and secrets
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.*
 *.pem
 *.key
 sshkey
 id_rsa*
 id_ed25519*
-
-# Credentials files
 credentials.enc
 *.credentials
 
-# Python build artifacts
-*.egg-info/
-*.egg
+# ── Editors & IDEs ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Build / output ────────────────────────────────────────────────────────────
+out/
+*.tgz
+.build/
+coverage/
+*.lcov
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# ── Tool caches ───────────────────────────────────────────────────────────────
+.eslintcache
+.cache/
+*.tsbuildinfo
+.wrangler/
+.mintlify/
+
+# ── Local runtime data ────────────────────────────────────────────────────────
+.agent-runtime/
+~/.zero-pipeline/
+
+# ── Claude Code ───────────────────────────────────────────────────────────────
+.claude/settings.local.json
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+.oss-sync-temp/
+pnpm-lock.yaml
+~/
 
