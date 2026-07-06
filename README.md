@@ -651,7 +651,7 @@ uv run --project python mypy python/src/data_pipeline/
 
 **EuroPython 2026** — [presentation/index.html](presentation/index.html)
 
-Open in any browser. Press `S` for speaker view (notes + timer).
+Open in any browser.
 
 ---
 
