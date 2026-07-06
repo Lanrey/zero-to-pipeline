@@ -263,7 +263,7 @@ python/
 │   │       ├── source.py             # Source + InferredConfig models
 │   │       ├── pipeline.py           # Pipeline execution models
 │   │       └── records.py            # Data record models
-│   └── agent_backend/                 # Legacy package (preserved)
+
 ├── tests/
 │   ├── test_pipeline.py               # Orchestrator tests
 │   ├── test_connectors.py            # Connector + registry + healing tests

@@ -44,10 +44,6 @@ dev = [
 pipeline = "data_pipeline.cli:main"
 pipeline-mcp-server = "data_pipeline.mcp.server:PipelineMCPServer.run"
 
-# Legacy aliases (backward compat with demo recordings)
-agentctl = "agent_backend.cli:main"
-sourcectl = "agent_backend.cli:main"
-
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
