@@ -647,15 +647,11 @@ uv run --project python mypy python/src/data_pipeline/
 
 ---
 
-## Presentations
+## Presentation
 
-- **EuroPython 2026** — [presentation/index.html](presentation/index.html) (open in browser, press `S` for speaker notes)
-- **PyData Helsinki** — [Google Slides](https://docs.google.com/presentation/d/1iWNqe-PDDbrXpOal0TMOAvmb7SS7AzQsf6DyEvkgFMI/edit?usp=sharing)
+**EuroPython 2026** — [presentation/index.html](presentation/index.html)
 
-### Photos
-
-[![PyData Helsinki Photo 1](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)
-[![PyData Helsinki Photo 2](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)
+Open in any browser. Press `S` for speaker view (notes + timer).
 
 ---
 
