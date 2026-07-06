@@ -1,442 +1,745 @@
-# data-ingestion-pydata-helenski-demo
+# Zero to Pipeline: When Data Connectors Just Work
 
-## Presentation
+> **EuroPython 2025** — Data Engineering & MLOps Track (30 min)
+>
+> *Remember spending entire afternoons configuring data connectors, debugging OAuth flows, and writing custom parsers just to ingest data from a single API? What if you could just say "add Linear as a source" and have your pipeline automatically discover the API, handle authentication, and start ingesting data — no config files, no setup wizards?*
 
-[PyData Helsinki Demo — Google Slides](https://docs.google.com/presentation/d/1iWNqe-PDDbrXpOal0TMOAvmb7SS7AzQsf6DyEvkgFMI/edit?usp=sharing)
+## Talk Outline
 
-## Photos
+| Time | Section | What You'll See |
+|------|---------|-----------------|
+| 0:00–2:00 | **Opener + Promise** | The pain of connector setup; framing "Zero to Pipeline" |
+| 2:00–6:00 | **What "Just Work" Means** | Success criteria: fast first sync, sane defaults, minimal input |
+| 6:00–12:00 | **Architecture Overview** | The moving parts — registry, auth, extraction, orchestration |
+| 12:00–17:00 | **Live Demo** | "add Linear as a source" → first data appears |
+| 17:00–23:00 | **Reliability Playbook** | Retries, checkpointing, idempotency, rate limits |
+| 23:00–25:00 | **Takeaways** | Checklist for building self-configuring connectors |
+| 25:00–30:00 | **Q&A** | |
 
-[![PyData Helsinki Photo 1](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)
+---
 
-[![PyData Helsinki Photo 2](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)
+## Architecture
 
-## Python Backend (First-Time User Guide)
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Zero to Pipeline Framework                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐ │
+│  │   CLI    │    │  MCP Server  │    │  AI Agent    │    │  Python API  │ │
+│  │ (typer)  │    │   (stdio)    │    │ Integration  │    │  (import)    │ │
+│  └────┬─────┘    └──────┬───────┘    └──────┬───────┘    └──────┬───────┘ │
+│       └──────────────────┼────────────────────┼──────────────────┘         │
+│                          ▼                    ▼                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    Provider Registry                                 │  │
+│  │   Known presets (linear, github, notion, slack, jira)               │  │
+│  │   + Dynamic inference for ANY unknown provider                      │  │
+│  └────────────────────────────────┬────────────────────────────────────┘  │
+│                                   │                                        │
+│                                   ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    LLM Discovery Engine                              │  │
+│  │   ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌──────────┐            │  │
+│  │   │ Copilot  │ │  OpenAI  │ │ Anthropic │ │  Ollama  │            │  │
+│  │   └──────────┘ └──────────┘ └───────────┘ └──────────┘            │  │
+│  │   Plan actions · Heal failures · Discover auth · Infer config      │  │
+│  └────────────────────────────────┬────────────────────────────────────┘  │
+│                                   │                                        │
+│       ┌───────────────────────────┼───────────────────────┐               │
+│       ▼                           ▼                       ▼               │
+│  ┌───────────────┐     ┌────────────────────┐    ┌──────────────────┐   │
+│  │  Self-Healing │     │  Universal API     │    │  Pipeline        │   │
+│  │   Connector   │     │  Connector         │    │  Orchestrator    │   │
+│  │               │     │  (any REST/GraphQL)│    │  (async DAG)     │   │
+│  │ Auth healing  │     │  Retry + backoff   │    │  Checkpointing   │   │
+│  │ Format adapt  │     │  Rate limiting     │    │  Parallel steps  │   │
+│  │ Pagination    │     │  Pagination        │    │  Retry per step  │   │
+│  │   inference   │     │  Schema inference  │    │                  │   │
+│  └───────┬───────┘     └────────┬───────────┘    └────────┬─────────┘   │
+│          │                      │                          │              │
+│          └──────────────────────┼──────────────────────────┘              │
+│                                 ▼                                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    Secure Auth Layer                                  │  │
+│  │  ┌───────────────┐  ┌────────────────────┐  ┌────────────────────┐ │  │
+│  │  │ OS Keyring    │  │ OAuth Device Flow  │  │ Credential Store   │ │  │
+│  │  │ (macOS/Linux) │  │ (RFC 8628)         │  │ (per-source)       │ │  │
+│  │  └───────────────┘  └────────────────────┘  └────────────────────┘ │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │                    Source Store (persistent)                          │  │
+│  │  ~/.zero-pipeline/workspaces/default/sources/{slug}/config.json     │  │
+│  │  Tracks: connection status, last sync, default endpoint, metadata   │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌───────────────────────────────┐
+              │        Destinations           │
+              │  ┌───────┐ ┌─────┐ ┌──────┐ │
+              │  │ JSONL  │ │ S3  │ │  DB  │ │
+              │  └───────┘ └─────┘ └──────┘ │
+              └───────────────────────────────┘
+```
 
-If you are new, this guide is for you.
+---
 
-Goal: you can type a request like **"connect to notion"** or **"connect to linear"** and use the CLI step by step.
+## How It Works
 
-## What this tool gives you
+### 1. Source Discovery & Auto-Configuration
 
-- `agentctl`: create and manage connections (“sources”).
-- `agentctl chat --cli ...`: consolidated chat-first command for connect + actions (recommended).
+When you say `pipeline source add linear`, the framework:
 
-## 10-minute first run (copy/paste)
+1. **Checks the provider registry** — for known providers, returns pre-configured connection details instantly
+2. **For unknown providers** — infers from the name (`api.{name}.com`), then optionally uses LLM to discover the real configuration
+3. **Persists the source** — saves to `~/.zero-pipeline/workspaces/default/sources/{slug}/config.json`
+4. **No config files needed** — works for ANY API name, known or unknown
+
+```python
+# MLOps / Data Engineering presets — instant config:
+pipeline source add mlflow       # → localhost:5000, REST, offset pagination
+pipeline source add wandb        # → api.wandb.ai, GraphQL cursor
+pipeline source add airflow      # → localhost:8080, REST, basic auth
+pipeline source add prometheus   # → localhost:9090, REST, no auth needed
+
+# Unknown provider — LLM-discovers or infers from name:
+pipeline source add my-feature-store   # → LLM discovers config
+pipeline source add internal-api       # → api.internal-api.com (fallback)
+```
+
+### 2. LLM-Powered Intelligence (Pluggable Providers)
+
+The framework uses LLM to supercharge discovery and self-healing. You choose which LLM backend to use:
+
+| Provider | Config | Best For |
+|----------|--------|----------|
+| **Copilot** | `copilot` CLI installed | Legacy support, GitHub integration |
+| **OpenAI** | `OPENAI_API_KEY` env var | GPT-4o, most capable |
+| **Anthropic** | `ANTHROPIC_API_KEY` env var | Claude direct API |
+| **Bedrock** | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | Claude via AWS, enterprise/production |
+| **Ollama** | Local server at `:11434` | Fully offline, privacy-first |
+
+```bash
+# Select explicitly:
+export PIPELINE_LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+
+# Or use Anthropic direct:
+export PIPELINE_LLM_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Or use Claude via AWS Bedrock:
+export PIPELINE_LLM_PROVIDER=bedrock
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+# Optional: export AWS_SESSION_TOKEN=... (for assumed roles)
+# Optional: export PIPELINE_LLM_MODEL=anthropic.claude-sonnet-4-20250514-v1:0
+
+# Or let it auto-detect (tries copilot → openai → anthropic → bedrock → ollama)
+
+# Override the model for any provider:
+export PIPELINE_LLM_MODEL=gpt-4o-mini
+```
+
+The LLM powers four capabilities:
+- **`plan_action`** — "list all open issues" → determines `GET /issues?state=open`
+- **`heal_failure`** — API returns 400? LLM suggests corrected parameters
+- **`discover_auth_docs`** — finds how to authenticate with any unknown API
+- **`discover_provider_config`** — discovers base URL, pagination, endpoints for unknown APIs
+
+**Everything works without LLM** — the registry and inference patterns handle the common cases. LLM is an accelerator for edge cases and unknown APIs.
+
+### 3. Secure Authentication (Zero Token Pasting)
+
+```
+┌──────────┐         ┌──────────────┐         ┌─────────────┐
+│   CLI    │────────▶│  Provider    │────────▶│   Browser   │
+│          │ device  │  (Linear,    │ user     │  (user sees │
+│          │ code    │   GitHub)    │ code     │  auth page) │
+│          │◀────────│              │◀─────────│             │
+│          │ tokens  │              │ approved │             │
+└──────────┘         └──────────────┘         └─────────────┘
+     │
+     ▼
+┌──────────┐
+│ OS       │  Tokens stored in macOS Keychain / Linux Secret Service
+│ Keyring  │  Never touch disk as plaintext
+└──────────┘
+```
+
+**API Key via Keyring** — for services with static tokens:
+```bash
+pipeline auth set linear   # prompted securely via getpass
+# Token goes straight to OS keychain — never in .env, never in git
+```
+
+### 4. Self-Healing Connector
+
+Every request goes through the `SelfHealingConnector` which automatically adapts:
+
+| Failure | Healing Action |
+|---------|---------------|
+| `401` with `Bearer <token>` | Tries `<token>` without prefix |
+| `401` with Authorization header | Tries `X-API-Key`, `Api-Key` headers |
+| Rate limited (429) | Respects `Retry-After`, exponential backoff |
+| Pagination breaks mid-stream | Resumes from last checkpoint cursor |
+| Unknown pagination style | Infers from response (Link headers, cursor fields) |
+
+```python
+# The self-healing connector tries multiple auth formats automatically:
+connector = SelfHealingConnector("https://api.linear.app", "lin_abc123")
+response = await connector.request_with_healing("POST", "/graphql", json_body=query)
+# If "Bearer lin_abc123" fails, tries "lin_abc123" (Linear's actual format) ✓
+```
+
+### 5. Pipeline Orchestration
+
+```python
+pipeline = Pipeline("my-pipeline")
+pipeline.add_step("extract_linear", extract_linear_fn)
+pipeline.add_step("extract_github", extract_github_fn)
+pipeline.add_step("transform", transform_fn, depends_on=["extract_linear", "extract_github"])
+pipeline.add_step("load", load_fn, depends_on=["transform"])
+
+# Independent steps run in parallel, dependencies form a DAG
+result = await engine.run(pipeline)
+```
+
+### 6. MCP Server Integration
+
+The framework exposes pipeline operations as MCP tools for AI assistants:
+
+```json
+{"tools": [
+  {"name": "add_source", "description": "Add any data source"},
+  {"name": "sync_source", "description": "Trigger extraction"},
+  {"name": "list_sources", "description": "List configured sources"},
+  {"name": "test_connection", "description": "Verify connectivity"}
+]}
+```
+
+---
+
+## Project Structure
+
+```
+python/
+├── src/
+│   ├── data_pipeline/                  # Production package
+│   │   ├── config.py                   # Settings (pydantic-settings + .env)
+│   │   ├── cli.py                      # Typer CLI
+│   │   ├── auth/
+│   │   │   ├── credential_store.py     # OS keyring integration
+│   │   │   ├── device_flow.py          # OAuth 2.0 Device Flow (RFC 8628)
+│   │   │   └── manager.py             # Unified auth coordinator
+│   │   ├── connectors/
+│   │   │   ├── base.py                 # Universal APIConnector + pagination
+│   │   │   ├── registry.py            # Provider presets + InferredConfig
+│   │   │   ├── discovery.py           # API probing and schema inference
+│   │   │   ├── self_healing.py        # Adaptive auth/pagination healing
+│   │   │   └── llm_discovery.py       # LLM providers (OpenAI/Anthropic/Ollama/Copilot)
+│   │   ├── sources/
+│   │   │   └── store.py               # Persistent source state management
+│   │   ├── orchestrator/
+│   │   │   ├── checkpoint.py          # File-based cursor persistence
+│   │   │   ├── pipeline.py           # DAG pipeline builder
+│   │   │   └── engine.py             # Async execution engine
+│   │   ├── extractors/
+│   │   │   └── extract.py            # Orchestration-aware extraction
+│   │   ├── loaders/
+│   │   │   ├── base.py               # Loader interface
+│   │   │   └── jsonl.py              # JSONL file loader
+│   │   ├── observability/
+│   │   │   ├── logging.py            # Structured logging (structlog)
+│   │   │   └── metrics.py            # Counter/gauge/histogram
+│   │   ├── mcp/
+│   │   │   ├── server.py             # MCP tool server
+│   │   │   └── stdio.py              # MCP stdio transport
+│   │   └── schemas/
+│   │       ├── source.py             # Source + InferredConfig models
+│   │       ├── pipeline.py           # Pipeline execution models
+│   │       └── records.py            # Data record models
+│   └── agent_backend/                 # Legacy package (preserved)
+├── tests/
+│   ├── test_pipeline.py               # Orchestrator tests
+│   ├── test_connectors.py            # Connector + registry + healing tests
+│   └── test_auth.py                  # Auth module tests
+├── examples/
+│   ├── single_source_quick.py        # Minimal demo script
+│   └── multi_source_pipeline.py      # Multi-source DAG example
+└── pyproject.toml
+```
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+git clone <repo-url>
+cd dataingestionpydatahelenskidemo
+uv sync --project python --extra dev
+```
+
+### First Pipeline (3 commands)
+
+```bash
+# 1. Add a source (auto-configured, persisted)
+pipeline source add linear
+
+# 2. Store credentials (in OS keychain, not .env)
+pipeline auth set linear
+
+# 3. Sync (uses default endpoint, with checkpointing)
+pipeline sync run linear
+```
+
+### Multi-Source Pipeline
+
+```bash
+pipeline source add linear
+pipeline source add github
+pipeline source add notion
+
+pipeline auth set linear
+pipeline auth set github
+pipeline auth set notion
+
+# Each uses its default endpoint, all extract with checkpointing
+pipeline sync run linear
+pipeline sync run github
+pipeline sync run notion
+```
+
+### Any Provider Works
+
+```bash
+# MLOps & Data Engineering presets — instant, zero config:
+pipeline source add mlflow       # experiment tracking (local or remote)
+pipeline source add wandb        # W&B runs, artifacts, sweeps
+pipeline source add airflow      # DAG runs and task history
+pipeline source add prometheus   # metrics and alerts
+pipeline source add prefect      # flow runs and deployments
+pipeline source add github       # CI/CD, repos, actions
+
+# Unknown providers — LLM-discovered or name-inferred:
+pipeline source add my-feature-store     # → LLM discovers endpoints
+pipeline source add internal-monitoring  # → api.internal-monitoring.com
+```
+
+### Configure LLM Provider
+
+```bash
+# Use OpenAI:
+export PIPELINE_LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+
+# Or Anthropic (direct API):
+export PIPELINE_LLM_PROVIDER=anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Or Claude via AWS Bedrock (enterprise):
+export PIPELINE_LLM_PROVIDER=bedrock
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+
+# Or local Ollama (fully offline):
+export PIPELINE_LLM_PROVIDER=ollama
+# (requires ollama running on localhost:11434)
+
+# Or GitHub Copilot CLI (legacy):
+export PIPELINE_LLM_PROVIDER=copilot
+# (requires `copilot` CLI installed and authenticated)
+```
+
+### CLI Reference
+
+```bash
+# Source management
+pipeline source add <provider>          # Add any source (persisted)
+pipeline source add <provider> --base-url https://...  # Override URL
+pipeline source list                    # Show YOUR added sources
+pipeline source list-providers          # Show available presets
+pipeline source discover <provider>     # Probe API capabilities
+pipeline source test <provider>         # Test connectivity
+
+# Authentication
+pipeline auth set <provider>            # Store token in keychain
+pipeline auth login <provider>          # OAuth Device Flow
+pipeline auth status                    # Check auth state
+pipeline auth revoke <provider>         # Remove credentials
+
+# Data extraction
+pipeline sync run <provider>            # Extract using default endpoint
+pipeline sync run <provider> /custom/path  # Explicit endpoint
+pipeline sync run <provider> --full     # Force full sync
+pipeline sync run <provider> --no-heal  # Disable self-healing
+pipeline sync status                    # Show checkpoints
+
+# System
+pipeline doctor                         # Health checks
+pipeline mcp-server                     # Start MCP server
+```
+
+---
+
+## Step-by-Step Walkthrough
+
+This section walks through the complete workflow from zero to data flowing, exactly as you'd demo it on stage.
 
 ### Step 1: Install
 
 ```bash
-uv sync --project python
-uv tool install --editable ./python
+git clone https://github.com/your-org/dataingestionpydatahelenskidemo.git
+cd dataingestionpydatahelenskidemo
+uv sync --project python --extra dev
 ```
 
-Check installation:
+Verify the installation (use `uv run --project python pipeline` or activate the venv first):
+```bash
+uv run --project python pipeline doctor
+#   OK  Keyring accessible
+#   OK  Provider registry loaded
+#   OK  Checkpoint dir writable
+#   OK  Source store accessible
+# All checks passed!
+```
+
+### Step 2: Configure LLM (optional but recommended)
+
+The LLM enables auto-discovery of unknown APIs. Choose one:
 
 ```bash
-agentctl --help
+# Option A: AWS Bedrock (recommended for the demo)
+export PIPELINE_LLM_PROVIDER=bedrock
+export AWS_ACCESS_KEY_ID=AKIA...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_REGION=us-east-1
+
+# Option B: OpenAI
+export PIPELINE_LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+
+# Option C: Skip entirely (system still works, just uses name-based inference)
 ```
 
-### Step 2: Sign in once (Copilot CLI)
+### Step 3: Add a Source
+
+**Known provider (instant — uses demo preset):**
+```bash
+pipeline source add linear
+# Source 'Linear' added (from: preset)
+#   Base URL: https://api.linear.app
+#   Auth: api_key
+#   Pagination: graphql_cursor
+#   Default endpoint: /graphql
+```
+
+**Unknown provider (auto-discovered via LLM or inferred from name):**
+```bash
+pipeline source add stripe
+# Source 'Stripe' added (from: llm_discovered)
+#   Base URL: https://api.stripe.com
+#   Auth: bearer
+#   Default endpoint: /v1/charges
+```
+
+**Completely custom/internal API:**
+```bash
+pipeline source add my-company-api --base-url https://api.internal.mycompany.com
+# Source 'My-Company-Api' added (from: inferred)
+#   Base URL: https://api.internal.mycompany.com
+```
+
+### Step 4: Store Credentials
+
+Tokens are stored in your OS keychain (macOS Keychain / Linux Secret Service) — never in `.env`, never in git:
 
 ```bash
-copilot login
+pipeline auth set linear
+# Enter API token for linear: ****
+# Token stored securely for linear
+
+# Verify:
+pipeline auth status
+# ┏━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+# ┃ Provider ┃ Status            ┃
+# ┡━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+# │ linear   │ authenticated     │
+# └──────────┴───────────────────┘
 ```
 
-Optional: if you still want `agentctl` local auth metadata, you can also run:
+### Step 5: Test the Connection
 
 ```bash
-agentctl auth login --provider github-copilot --from-gh
+pipeline source test linear
+# Testing connection to https://api.linear.app...
+# Connection to linear successful!
 ```
 
-### Step 3: Ask in plain English (your exact use case)
+If the auth format is wrong, self-healing kicks in automatically during sync.
 
-Example: “connect to linear” (chat-first)
+### Step 6: Run Your First Sync
 
 ```bash
-agentctl chat --cli "connect to linear"
+pipeline sync run linear
+# Syncing linear /graphql...
+#   1. BUG-123: Fix login page timeout
+#   2. FEAT-456: Add dark mode
+#   3. TASK-789: Update dependencies
+#   ...
+# Done: 142 records extracted
+# Output: ~/.zero-pipeline/output/linear/graphql.jsonl
 ```
 
-Single-command onboarding (connect + guided auth prompt):
+What happened behind the scenes:
+1. Loaded credentials from OS keychain
+2. Detected GraphQL API → used POST with query body
+3. Paginated through all results (cursor-based)
+4. Saved checkpoint for incremental sync next time
+5. Wrote records to JSONL file
+
+### Step 7: Incremental Sync (only new data)
 
 ```bash
-agentctl chat --cli "connect to linear" --auto-auth
+pipeline sync run linear
+# Resuming from checkpoint cursor: eyJjdXJzb3IiOi...
+# Done: 3 records extracted (only changes since last sync)
 ```
 
-When docs are shown during `--auto-auth`, the CLI asks you to confirm whether those links are correct for your setup. If you answer no, onboarding does **not** stop: it runs an agentic docs probe to suggest refined authentication links, then continues credential onboarding.
+Force a full re-sync:
+```bash
+pipeline sync run linear --full
+# Checkpoint cleared — full sync
+# Done: 142 records extracted
+```
 
-Any tool with provider-type hint (API or MCP), still chat-based:
+### Step 8: Natural Language Interface
+
+Instead of remembering commands, just say what you want:
 
 ```bash
-agentctl chat --cli "connect to zendesk" --provider-type api
-agentctl chat --cli "connect to github" --provider-type mcp
+pipeline chat "add notion as a source"
+# Adding source: notion
+# Source 'Notion' added (from: preset)
+
+pipeline chat "sync data from linear"
+# Syncing from linear...
+# Done: 142 records extracted
+
+pipeline chat "show me my sources"
+# [lists sources table]
 ```
 
-This performs the actual connection setup (creates the source config), not just a suggestion.
-
-Important: `connect` does **not** auto-mark a source as connected when auth is required. It now returns authentication `nextSteps` and keeps status as `needs_auth` until you authenticate.
-
-URL discovery is automatic. You do not need to pass endpoint URLs for connect in normal use.
-
-You will see a step-by-step reasoning log during the run, for example:
-
-- request received
-- provider parsed
-- preset/default selected
-- source created
-
-Safe mode (see request without sending):
+### Step 9: Multi-Source Pipeline
 
 ```bash
-agentctl chat --cli "connect to linear" --dry-run
+# Add multiple sources
+pipeline source add linear
+pipeline source add github
+pipeline source add notion
+
+# Auth each
+pipeline auth set linear
+pipeline auth set github
+pipeline auth set notion
+
+# Sync all (each uses its default endpoint)
+pipeline sync run linear
+pipeline sync run github
+pipeline sync run notion
+
+# All data lands in ~/.zero-pipeline/output/{provider}/
+ls ~/.zero-pipeline/output/
+# linear/  github/  notion/
 ```
 
-### Step 4: Confirm your connection was created
+### Step 10: Inspect Your Data
 
 ```bash
-agentctl list --workspace ~/.agent-runtime/workspaces/default
+# View extracted records
+cat ~/.zero-pipeline/output/linear/graphql.jsonl | head -3
+# {"id": "issue_1", "source_id": "linear", "resource_type": "graphql", "raw_data": {...}}
+# {"id": "issue_2", "source_id": "linear", "resource_type": "graphql", "raw_data": {...}}
+
+# Check sync status and checkpoints
+pipeline sync status
+# ┏━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
+# ┃ Source           ┃ Cursor          ┃ Last Sync           ┃
+# ┡━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
+# │ linear:/graphql  │ eyJjdX...       │ 2025-07-05 14:30:00 │
+# └──────────────────┴─────────────────┴─────────────────────┘
 ```
 
-If your source name was `connect to linear`, the slug is usually `connect-to-linear`.
-
-Check one source:
+### The "Zero to Pipeline" Promise in Action
 
 ```bash
-agentctl get --workspace ~/.agent-runtime/workspaces/default connect-to-linear
+# From absolutely nothing to data flowing — three commands:
+pipeline source add linear          # 1. Auto-discover the API
+pipeline auth set linear            # 2. Store credentials securely
+pipeline sync run linear            # 3. Data flows
+
+# No YAML. No config files. No setup wizards. No custom parsers.
+# Just name the API and go.
 ```
 
-When auth is required, the source will show:
+---
 
-- `isAuthenticated: false`
-- `connectionStatus: "needs_auth"`
+## The Reliability Playbook
 
-This is expected until you complete authentication.
+### Why Not Temporal?
 
-### Step 5: Mark it connected after auth is complete
+| Concern | Temporal | This Framework |
+|---------|----------|---------------|
+| Infrastructure | Requires cluster + workers | Zero — runs in-process |
+| Debugging | gRPC + Rust core = opaque | Pure Python asyncio = transparent |
+| Learning curve | SDK + concepts + deployment | Standard library patterns |
+| Demo-ability | 10 min explaining infra | 30 seconds explaining the code |
 
-Authentication flow (in order):
+**When to reach for Temporal**: Distributed execution across machines, very long-running workflows, complex compensation/saga patterns.
 
-1. `connect` creates the source and returns `authentication.nextSteps`.
-2. `credential set` stores your token/credential (or `--auto-auth` does this inline).
-3. `mark-authenticated` sets `isAuthenticated=true` and `connectionStatus=connected`.
+### Retries with Exponential Backoff
 
-```bash
-agentctl mark-authenticated --workspace ~/.agent-runtime/workspaces/default connect-to-linear
+```python
+@retry(
+    retry=retry_if_exception_type((httpx.TransportError, RateLimitError)),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, max=60),
+)
+async def request(self, method, path, **kwargs):
+    ...
 ```
 
-### Step 6: Health check
+### Checkpointing (Cursor/Watermark)
 
-```bash
-agentctl doctor --workspace ~/.agent-runtime/workspaces/default
+```python
+# Cursors are persisted after each batch
+state = CheckpointState(pipeline_id="run_abc", source_id="linear", cursor="abc123")
+checkpoint_manager.save(state)
+
+# On restart, extraction resumes from last cursor — no replay
+checkpoint = checkpoint_manager.load("run_abc", "linear")
+# "Resuming from checkpoint cursor: abc123"
 ```
 
-## Do real actions after connecting (CLI only)
+### Self-Healing Auth
 
-Once connected, you can ask the CLI to perform actual tool actions (not suggestions).
-
-Current support in this version:
-
-- **Any API tool** through agent-planned generic API calls.
-- **Linear enhanced mode** with issue-aware actions (`list_issues`, `create_issue`).
-- **MCP sources** via chat planning output (transport-aware MCP action plan) with live tool discovery.
-
-MCP probing modes:
-
-- `--mcp-probe live` (default): call MCP `tools/list` and use discovered tools for planning/tool selection.
-- `--mcp-probe cached`: use static `mcp.tools` from source config.
-- `--mcp-probe off`: skip probing.
-
-### Step 7: Save credentials for the connected source
-
-Example for Linear source slug `connect-to-linear`:
-
-```bash
-agentctl credential set \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--source connect-to-linear
+```python
+# First attempt: Bearer tok123 → 401
+# Healing: tries tok123 (no prefix) → 200 ✓
+# Learned: Linear doesn't want Bearer prefix
+# Next request uses the corrected format automatically
 ```
 
-This now opens an interactive, secure prompt (hidden input) and shows provider auth guidance before asking for your token.
+### Rate Limit Handling
 
-During auto-auth, you can explicitly reject the suggested docs when prompted (`Are these documentation links correct for your setup?`). If you reject them, the CLI probes for improved docs and continues with credential capture.
-
-If you use `--auto-auth` at connect time, this step is done inline as part of the connect command.
-
-Non-interactive/CI mode is still supported:
-
-```bash
-agentctl credential set \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--source connect-to-linear \
-	--value "YOUR_LINEAR_API_TOKEN" \
-	--mark-authenticated
+```python
+if response.status_code == 429:
+    retry_after = float(response.headers.get("Retry-After", "60"))
+    await asyncio.sleep(retry_after)
+    raise RateLimitError(retry_after)  # triggers tenacity retry
 ```
 
-Non-interactive single-command onboarding:
+---
 
-```bash
-agentctl chat --cli "connect to linear" \
-	--auto-auth \
-	--auth-value "YOUR_LINEAR_API_TOKEN" \
-	--mark-authenticated
-```
+## Observability
 
-Check credential status:
-
-```bash
-agentctl credential status \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--source connect-to-linear
-```
-
-`credential set`, `auth login`, and `mark-authenticated` now return a `steps` array in output so you can see each authentication step performed.
-
-You can also view the auth flow + provider docs for a source at any time:
-
-```bash
-agentctl auth guide \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--source connect-to-linear \
-	--pretty
-```
-
-Example `steps` output (shortened):
+### Structured Logging (JSON)
 
 ```json
-{
-	"steps": [
-		"Resolved workspace: ...",
-		"Looking up source: connect-to-linear",
-		"Source found.",
-		"Stored credential cache with TTL=24h."
-	]
-}
+{"event": "extraction_complete", "source": "linear", "resource": "issues", "records": 142}
+{"event": "self_healing_auth", "base_url": "https://api.linear.app", "error": "401"}
+{"event": "healing_success", "new_prefix": "", "new_header": "Authorization"}
+{"event": "pipeline_completed", "total_records": 847, "duration_ms": 12340}
 ```
 
-### Step 8: Execute actions with agentic reasoning
+### Alert-Worthy Signals
 
-List issues in Linear:
+| Signal | Meaning |
+|--------|---------|
+| `step_failed` after max retries | Source down or creds expired |
+| `rate_limited` | Approaching API limits |
+| `healing_success` | Auto-corrected a misconfiguration |
+| `llm_no_provider_available` | No LLM for discovery — using fallback |
+
+---
+
+## Connecting to ANY API (No Custom Code)
+
+The whole point: you **don't** write per-provider connector classes.
+
+```python
+from data_pipeline.connectors import SelfHealingConnector, OffsetPagination
+
+# Connect to ANY API — no provider-specific code:
+connector = SelfHealingConnector(
+    "https://api.your-service.com",
+    credential="your-api-key",
+    auth_prefix="Bearer",
+)
+
+# Extract with self-healing:
+async for record in connector.extract_with_healing(
+    "GET", "/v1/items",
+    pagination=OffsetPagination(page_size=100),
+    source_id="your-service",
+    resource_type="items",
+):
+    process(record)
+```
+
+**To accelerate a known API** (optional preset):
+
+```python
+from data_pipeline.connectors.registry import ProviderPreset, provider_registry
+from data_pipeline.schemas import AuthType
+
+provider_registry.register("your-api", ProviderPreset(
+    name="Your API",
+    base_url="https://api.your-service.com",
+    auth_type=AuthType.API_KEY,
+    pagination_style="cursor",
+    default_endpoints={"items": "/v1/items", "users": "/v1/users"},
+))
+```
+
+---
+
+## Development
 
 ```bash
-agentctl chat --cli "list all issues in linear" \
-	--workspace ~/.agent-runtime/workspaces/default
+# Install with dev dependencies
+uv sync --project python --extra dev
+
+# Run tests
+uv run --project python --directory python pytest tests/ -v
+
+# Lint
+uv run --project python ruff check python/src/data_pipeline/
+
+# Type check
+uv run --project python mypy python/src/data_pipeline/
 ```
 
-Run a non-Linear tool action (example: Zendesk tickets):
+---
 
-```bash
-agentctl chat --cli "list tickets from /tickets.json in zendesk" \
-	--workspace ~/.agent-runtime/workspaces/default
-```
+## Previous Presentations
 
-Create a Linear issue:
+- [PyData Helsinki — Google Slides](https://docs.google.com/presentation/d/1iWNqe-PDDbrXpOal0TMOAvmb7SS7AzQsf6DyEvkgFMI/edit?usp=sharing)
 
-```bash
-agentctl chat --cli "create issue in linear in team ENG titled Fix login bug description OAuth callback fails" \
-	--workspace ~/.agent-runtime/workspaces/default
-```
+### Photos
 
-Plan-only mode (no API execution):
+[![PyData Helsinki Photo 1](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932617/)
+[![PyData Helsinki Photo 2](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)](https://www.meetup.com/pydatahelsinki/photos/35854184/532932618/)
 
-```bash
-agentctl chat --cli "create issue in linear titled Fix login bug" \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--dry-run
-```
+---
 
-The output includes `agentReasoning`, which explains how the agent interpreted your request and why it chose each action.
+## License
 
-If an action fails, the agent attempts a self-healing step (safe retry plan) and reports what it changed.
-
-For API actions, if an authorization failure occurs, the runner now attempts auth types automatically (`bearer`, `basic`, `header`, `query`, `none`) and uses the first one that succeeds.
-
-When running with interactive fix enabled, auth failures also offer retry options to choose one auth type or retry all auth types explicitly.
-
-When running in a terminal (TTY), failures can open an **interactive fix assistant** that offers quick recovery actions (for example: switch MCP probe mode, increase timeout, or update credentials) and can retry automatically.
-
-If you want guarded patch-style remediation, enable `--guarded-auto-apply`: the CLI shows a diff preview for supported safe fixes, asks for explicit confirmation, then applies and retries.
-
-For broader policy control, use `--fix-mode`, `--fix-scope`, and `--allow-code-patch`. Current shipped code-patch handler can propose updating CLI timeout defaults when timeout-class errors recur.
-
-By default, `chat`, `connect`, `act`, and `copilot` flows now stream real-time progress to **stderr** as JSON events (`step`, `reasoning`, `error`, `self_heal`, `fix`, `stream`) while final result JSON is still printed to **stdout**.
-
-If you need quiet/non-stream mode:
-
-```bash
-agentctl chat --cli "list all issues in linear" --no-stream
-```
-
-## If you want a manual command (no AI suggestion)
-
-Use this template and replace values in ALL CAPS:
-
-```bash
-agentctl create \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--name "connect to TOOL_NAME" \
-	--type api \
-	--provider TOOL_NAME \
-	--api '{"baseUrl":"https://API_BASE_URL","authType":"bearer"}'
-```
-
-Example:
-
-```bash
-agentctl create \
-	--workspace ~/.agent-runtime/workspaces/default \
-	--name "connect to linear" \
-	--type api \
-	--provider linear \
-	--api '{"baseUrl":"https://api.linear.app","authType":"bearer"}'
-```
-
-## Most useful everyday commands
-
-```bash
-agentctl chat --cli "connect to notion"
-agentctl chat --cli "list all issues in linear"
-agentctl list --workspace ~/.agent-runtime/workspaces/default
-agentctl get --workspace ~/.agent-runtime/workspaces/default SOURCE_SLUG
-agentctl delete --workspace ~/.agent-runtime/workspaces/default SOURCE_SLUG
-agentctl credential status --workspace ~/.agent-runtime/workspaces/default --source SOURCE_SLUG
-agentctl act "list all issues in linear" --workspace ~/.agent-runtime/workspaces/default --source SOURCE_SLUG
-agentctl auth status
-agentctl auth logout
-```
-
-## Optional advanced runtime notes
-
-`session-mcp-server` and `bridge-mcp-server` are internal runtime services used for session orchestration and API/MCP bridging.
-
-For normal usage, run the consolidated command instead:
-
-```bash
-agentctl chat --cli "connect to linear"
-agentctl chat --cli "list all issues in linear"
-```
-
-## Configuration reference (`agentctl chat --cli`)
-
-| Flag | Purpose | Example |
-|---|---|---|
-| `--provider-type {auto\|api\|mcp}` | Hint connect discovery to prefer API or MCP sources. | `agentctl chat --cli "connect to github" --provider-type mcp` |
-| `--source SOURCE_SLUG` | Force which connected source to use for action requests. | `agentctl chat --cli "list tickets" --source connect-to-zendesk` |
-| `--workspace PATH` | Use a non-default workspace root. | `agentctl chat --cli "connect to linear" --workspace ~/.agent-runtime/workspaces/default` |
-| `--dry-run` | Show the inferred plan/reasoning without executing actions. | `agentctl chat --cli "create issue in linear titled Fix login bug" --dry-run` |
-| `--heal-attempts N` | Retry failed actions with self-healing plan patches. | `agentctl chat --cli "list tickets from /tickets.json in zendesk" --heal-attempts 3` |
-| `--mcp-probe {live\|cached\|off}` | MCP tool discovery mode for action requests. | `agentctl chat --cli "list available tools in github" --mcp-probe live` |
-| `--interactive-fix` / `--no-interactive-fix` | Enable/disable interactive failure recovery assistant (TTY only). Default is on. | `agentctl chat --cli "list available tools in github" --no-interactive-fix` |
-| `--guarded-auto-apply` / `--no-guarded-auto-apply` | Preview safe fix diffs and apply only after explicit confirmation, then retry. Default is off. | `agentctl chat --cli "list all issues in linear" --guarded-auto-apply` |
-| `--fix-mode {suggest\|guarded\|auto}` | Set remediation behavior on failures: suggest only, confirm-before-apply, or auto-apply for supported fixes. | `agentctl chat --cli "list all issues in linear" --fix-mode guarded` |
-| `--fix-scope {runtime\|config\|code\|all}` | Constrain which fix categories can be auto-applied. | `agentctl chat --cli "list all issues in linear" --fix-mode guarded --fix-scope config` |
-| `--allow-code-patch` / `--no-allow-code-patch` | Allow code-file patch fixes when a supported handler matches (example shipped: timeout default patch in CLI). | `agentctl chat --cli "list available tools in github" --fix-mode guarded --fix-scope code --allow-code-patch` |
-| `--fix-dry-run` / `--no-fix-dry-run` | Show proposed fix diff without applying changes. | `agentctl chat --cli "list all issues in linear" --fix-mode guarded --fix-scope config --fix-dry-run` |
-| `--auth-types-try CSV` | Override auth fallback order for API auth failures (comma-separated: `bearer,basic,header,query,none`). | `agentctl chat --cli "list tickets" --auth-types-try header,query,none` |
-| `--timeout SECONDS` | Planner/discovery timeout. | `agentctl chat --cli "connect to notion" --timeout 90` |
-| `--stream` / `--no-stream` | Toggle real-time stderr event streaming for steps/errors/retries. Default is on. | `agentctl chat --cli "list all issues in linear" --no-stream` |
-| `--base-url URL` | Override discovered base URL on connect requests. | `agentctl chat --cli "connect to zendesk" --provider-type api --base-url https://subdomain.zendesk.com/api/v2` |
-| `--auth-type TYPE` | Override discovered auth type on connect requests. | `agentctl chat --cli "connect to zendesk" --provider-type api --auth-type bearer` |
-| `--auto-auth` | Start guided authentication immediately after connect (single-command onboarding). | `agentctl chat --cli "connect to linear" --auto-auth` |
-| `--auth-value VALUE` | Provide credential for non-interactive auto-auth flow. | `agentctl chat --cli "connect to linear" --auto-auth --auth-value "TOKEN"` |
-| `--mark-authenticated` | Mark source connected after successful credential capture. | `agentctl chat --cli "connect to linear" --auto-auth --auth-value "TOKEN" --mark-authenticated` |
-
-## Files this creates
-
-- `~/.agent-runtime/auth/github-copilot.json`
-- `~/.agent-runtime/workspaces/default/sources/<source-slug>/config.json`
-- `~/.agent-runtime/workspaces/default/sources/<source-slug>/guide.md`
-
-## Optional environment settings
-
-```bash
-export AGENT_COPILOT_MODEL="gpt-5.3-codex"
-```
-
-Note: `agentctl copilot ...` now uses local `copilot` CLI execution (not direct endpoint calls).
-
-## Troubleshooting (common issues)
-
-### 1) `copilot` login fails or `copilot` is not found
-
-Cause: Copilot CLI is not installed or not authenticated yet.
-
-Fix:
-
-```bash
-copilot --help
-copilot login
-```
-
-If you use `agentctl auth login --from-gh`, make sure `gh` is logged in:
-
-```bash
-gh auth login
-```
-
-### 2) `agentctl copilot ...` fails with auth/session message
-
-Cause: Copilot CLI session is not authenticated.
-
-Fix:
-
-```bash
-copilot login
-```
-
-### 2b) I want to hide reasoning logs
-
-By default, `agentctl connect ...` shows reasoning logs.
-
-To disable:
-
-```bash
-agentctl connect "connect to linear" --no-show-reasoning
-```
-
-### 3) `Source not found` when running `get`, `delete`, or `mark-authenticated`
-
-Cause: wrong source slug or wrong workspace path.
-
-Fix:
-
-```bash
-agentctl list --workspace ~/.agent-runtime/workspaces/default
-```
-
-Copy the exact `slug` from the list, then run the command again with that slug.
-
-### 3b) `agentctl act ...` says credentials are missing
-
-Cause: source has no credential cache yet.
-
-Fix:
-
-```bash
-agentctl credential set --workspace ~/.agent-runtime/workspaces/default --source connect-to-linear
-```
-
-If you want to check the exact provider flow first:
-
-```bash
-agentctl auth guide --workspace ~/.agent-runtime/workspaces/default --source connect-to-linear --pretty
-```
-
-### 3c) Chat chose the wrong source
-
-If you have many connected tools and the request is ambiguous, pass source explicitly:
-
-```bash
-agentctl chat --cli "list tickets" --source connect-to-zendesk
-```
-
-### 4) Start fresh (safe reset)
-
-If you are testing and want a clean state:
-
-```bash
-rm -rf ~/.agent-runtime/workspaces/default/sources
-mkdir -p ~/.agent-runtime/workspaces/default/sources
-```
-
-## Need deeper architecture details?
-
-See the repository root README for full internals and diagrams.
+MIT
