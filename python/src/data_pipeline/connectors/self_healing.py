@@ -55,11 +55,12 @@ class HealingAction:
 class SelfHealingConnector:
     """Wraps an APIConnector with self-healing capabilities.
 
-    On failure, it:
-    1. Diagnoses the error type (auth, not found, rate limit, schema)
-    2. Generates a healing action (try different auth format, different path, etc.)
-    3. Retries with the corrected parameters
-    4. Logs the healing action for observability
+    On auth failure, rotates through known auth formats until one works and
+    saves the winner for all subsequent requests.
+
+    For no-auth sources (empty credential), healing is skipped entirely —
+    the request is sent with no Authorization header and any 401/403 is
+    surfaced as a plain error rather than triggering format rotation.
     """
 
     def __init__(
@@ -81,10 +82,18 @@ class SelfHealingConnector:
         self._healing_history: list[HealingAction] = []
 
     @property
+    def _no_auth(self) -> bool:
+        """True when no credential is set — auth healing should be skipped."""
+        return not self._credential
+
+    @property
     def healing_history(self) -> list[HealingAction]:
         return list(self._healing_history)
 
     def _build_auth_value(self, prefix: str, header: str) -> tuple[str, str]:
+        # Empty credential → no auth value (avoids "Bearer " illegal header)
+        if not self._credential:
+            return header, ""
         if prefix:
             return header, f"{prefix} {self._credential}"
         return header, self._credential
@@ -99,7 +108,7 @@ class SelfHealingConnector:
         return APIConnector(
             self._base_url,
             auth_header=header,
-            auth_value=auth_value,
+            auth_value=auth_value,  # empty string → header omitted by APIConnector
             default_headers=self._default_headers,
         )
 
@@ -110,14 +119,22 @@ class SelfHealingConnector:
         *,
         params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | None = None,
+        allow_auth_error: bool = False,
     ) -> httpx.Response:
-        """Make a request with self-healing on failure."""
+        """Make a request with self-healing on failure.
+
+        allow_auth_error=True: treat 401/403 as success (used for connectivity
+        checks where the server being reachable is all that matters).
+        """
         connector = self._create_connector()
 
         async with connector:
             try:
                 return await connector.request(method, path, params=params, json_body=json_body)
             except AuthenticationError as e:
+                if allow_auth_error:
+                    # Server is reachable — auth failure just means we need credentials
+                    raise
                 return await self._heal_auth(method, path, params=params, json_body=json_body, error=e)
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 404:
@@ -133,8 +150,23 @@ class SelfHealingConnector:
         json_body: dict[str, Any] | None,
         error: AuthenticationError,
     ) -> httpx.Response:
-        """Try different auth formats when authentication fails."""
-        logger.info("self_healing_auth", error=str(error), base_url=self._base_url)
+        """Try different auth formats when authentication fails.
+
+        Skipped for no-auth sources (empty credential) — those should never
+        require auth, so a 401/403 indicates a genuine server-side issue.
+        """
+        if self._no_auth:
+            raise ConnectorError(
+                f"Request to {self._base_url}{method} failed with auth error, "
+                "but this source is configured with no credentials. "
+                "If the server requires auth, run: pipeline auth set <provider>"
+            )
+        logger.info(
+            "self_healing.auth_start",
+            source=self._base_url,
+            reason="auth_error",
+            note="rotating through known auth formats",
+        )
 
         for attempt, (prefix, header) in enumerate(AUTH_FORMATS):
             if attempt >= self._max_heal_attempts:
@@ -142,13 +174,14 @@ class SelfHealingConnector:
             if prefix == self._auth_prefix and header == self._auth_header:
                 continue
 
+            fmt = f"{header}: {prefix} <token>" if prefix else f"{header}: <token>"
             action = HealingAction(
                 action_type="auth_format_change",
-                description=f"Trying auth: {header}: {prefix} <token>" if prefix else f"Trying auth: {header}: <token>",
+                description=f"trying {fmt}",
                 params={"auth_prefix": prefix, "auth_header": header},
             )
             self._healing_history.append(action)
-            logger.info("healing_attempt", action=action.description)
+            logger.info("self_healing.auth_attempt", attempt=attempt + 1, format=fmt)
 
             connector = self._create_connector(auth_prefix=prefix, auth_header=header)
             async with connector:
@@ -159,19 +192,20 @@ class SelfHealingConnector:
                     self._auth_prefix = prefix
                     self._auth_header = header
                     logger.info(
-                        "healing_success",
-                        action=action.description,
-                        new_prefix=prefix,
-                        new_header=header,
+                        "self_healing.auth_success",
+                        format=fmt,
+                        note="format saved for all future requests",
                     )
                     return response
                 except AuthenticationError:
+                    logger.debug("self_healing.auth_attempt_failed", format=fmt)
                     continue
 
+        tried = [f"{h}: {p} <token>" if p else f"{h}: <token>" for p, h in AUTH_FORMATS[:self._max_heal_attempts]]
         raise ConnectorError(
-            f"Authentication failed after {self._max_heal_attempts} healing attempts. "
-            f"Tried formats: {[(p, h) for p, h in AUTH_FORMATS[:self._max_heal_attempts]]}. "
-            f"Original error: {error}"
+            f"Auth healing exhausted after {self._max_heal_attempts} attempts. "
+            f"Formats tried: {tried}. "
+            "Run: pipeline auth set <provider>"
         )
 
     async def extract_with_healing(
@@ -198,6 +232,7 @@ class SelfHealingConnector:
         current_checkpoint = checkpoint
 
         connector = self._create_connector()
+        caught_auth_error: AuthenticationError | None = None
 
         async with connector:
             try:
@@ -214,14 +249,23 @@ class SelfHealingConnector:
                     seen_ids.add(record.id)
                     last_successful_cursor = record.cursor
                     yield record
-            except AuthenticationError:
-                # Heal auth outside the failed connector context
-                pass
+            except AuthenticationError as _auth_err:
+                caught_auth_error = _auth_err
             else:
                 # Completed without error — nothing to heal
                 return
 
-        # --- Healing phase ---
+        # No-auth sources: surface the error immediately, skip healing entirely
+        if caught_auth_error is not None and self._no_auth:
+            raise ConnectorError(
+                f"Auth error from {self._base_url} but source has no credentials. "
+                "If the server requires authentication, run: pipeline auth set <provider>"
+            ) from caught_auth_error
+
+        if caught_auth_error is None:
+            return
+
+        # --- Healing phase (only reached when credential is set and auth failed) ---
         logger.info(
             "healing_pagination_recovery",
             last_cursor=last_successful_cursor,

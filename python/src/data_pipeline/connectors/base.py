@@ -306,6 +306,47 @@ class CursorPagination(PaginationStrategy):
         return {"cursor": next_cursor}
 
 
+class MlflowRunsPagination(PaginationStrategy):
+    """MLflow-specific pagination for /runs/search and similar endpoints.
+
+    MLflow uses a body-based cursor (page_token) and returns results under
+    the 'runs' key with a 'next_page_token' field for the next page.
+    """
+
+    def __init__(self, page_size: int = 5):
+        self._page_size = page_size
+
+    def apply_to_request(self, params, json_body, state):
+        body = dict(json_body or {})
+        body["max_results"] = self._page_size
+        cursor = state.get("cursor")
+        if cursor:
+            body["page_token"] = cursor
+        else:
+            body.pop("page_token", None)
+        return params, body
+
+    def extract_records(self, data):
+        if isinstance(data, dict):
+            # MLflow returns {"runs": [...], "next_page_token": "..."}
+            runs = data.get("runs", [])
+            return runs if isinstance(runs, list) else []
+        return []
+
+    def get_cursor(self, data, state):
+        if isinstance(data, dict):
+            return data.get("next_page_token") or state.get("cursor")
+        return state.get("cursor")
+
+    def next_page(self, data, response, state):
+        if not isinstance(data, dict):
+            return None
+        token = data.get("next_page_token")
+        if token:
+            return {"cursor": token}
+        return None
+
+
 class GraphQLCursorPagination(PaginationStrategy):
     """GraphQL relay-style cursor pagination with pageInfo."""
 

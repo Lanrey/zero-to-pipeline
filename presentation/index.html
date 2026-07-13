@@ -3,326 +3,361 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zero to Pipeline: When Data Connectors Just Work — EuroPython 2026 talk by Olusola Akinsulere">
     <title>Zero to Pipeline — EuroPython 2026</title>
+    <!-- Open Sans from Google Fonts — matches example conference slide typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,700;0,800;1,400&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
     <style>
-        /* ── Color system (GitHub dark palette) ── */
+        /* ── Colour system — purplecon conference style ── */
         :root {
-            --bg:      #0d1117;
-            --bg-card: #161b22;
-            --border:  #30363d;
-            --text:    #c9d1d9;
-            --muted:   #8b949e;
-            --blue:    #58a6ff;
-            --green:   #3fb950;
-            --red:     #f85149;
-            --purple:  #d2a8ff;
-            --orange:  #e3b341;
+            --bg:       #444349;   /* dark warm gray — matches example slides */
+            --bg-dark:  #212123;   /* code block background */
+            --lavender: #ebdaff;   /* primary body text */
+            --lblue:    #aae5fa;   /* accent / keywords / headings */
+            --lpurple:  #c6a5ff;   /* secondary accent */
+            --white:    #ffffff;   /* code text on dark */
+            --coral:    #e06666;   /* inline code labels / error */
+            --gray:     #999999;   /* muted / secondary */
+            --red-box:  #ff0000;   /* callout border */
         }
         .reveal {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Open Sans', 'Calibri', sans-serif;
             background: var(--bg);
-            color: var(--text);
+            color: var(--lavender);
         }
         .reveal h1, .reveal h2, .reveal h3 {
-            font-weight: 800; letter-spacing: -0.03em;
-            color: var(--blue); text-transform: none;
+            font-family: 'Open Sans', 'Calibri', sans-serif;
+            font-weight: 800;
+            color: var(--lblue);
+            text-transform: none;
+            letter-spacing: -0.01em;
         }
-        .reveal h1 { font-size: 2.4em; line-height: 1.1; }
-        .reveal h2 { font-size: 1.7em; }
-        .reveal h3 { font-size: 1.1em; color: var(--orange); }
-        .reveal p, .reveal li { color: var(--text); }
-        .reveal pre  { font-size: 0.52em; box-shadow: none; width: 100%; margin: 0; }
-        .reveal pre code { padding: 1.1em 1.3em; border-radius: 10px; max-height: 480px; }
-        .reveal section { text-align: center; }
+        .reveal h1 { font-size: 2.6em; line-height: 1.1; }
+        .reveal h2 { font-size: 1.8em; }
+        .reveal h3 { font-size: 1.1em; color: var(--lpurple); }
+        .reveal p, .reveal li { color: var(--lavender); }
+        /* Code: Consolas/monospace white on dark bg — full-width purplecon style */
+        .reveal pre  { font-size: 0.56em; box-shadow: none; width: 100%; margin: 0; border-radius: 0; }
+        .reveal pre code {
+            padding: 1.2em 1.5em;
+            border-radius: 0;
+            max-height: 500px;
+            background: var(--bg-dark) !important;
+            font-family: 'Consolas', 'Fira Code', monospace;
+            font-size: 1em;
+        }
+        .reveal section { text-align: left; }
 
         /* ── Utility ── */
-        .red    { color: var(--red); }
-        .green  { color: var(--green); }
-        .blue   { color: var(--blue); }
-        .purple { color: var(--purple); }
-        .orange { color: var(--orange); }
-        .muted  { color: var(--muted); font-size: 0.75em; }
-        .bold   { font-weight: 800; }
-        .mono   { font-family: 'Fira Code', 'JetBrains Mono', monospace; }
+        .lblue   { color: var(--lblue); }
+        .lpurple { color: var(--lpurple); }
+        .lavender{ color: var(--lavender); }
+        .coral   { color: var(--coral); }
+        .gray    { color: var(--gray); }
+        .white   { color: var(--white); }
+        .bold    { font-weight: 800; }
+        .mono    { font-family: 'Consolas', 'Fira Code', monospace; }
 
-        /* ── Components ── */
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1em 1.4em;
-            margin: 0.4em 0;
-            text-align: left;
-        }
-        .card-blue  { border-left: 4px solid var(--blue); }
-        .card-green { border-left: 4px solid var(--green); }
-        .card-red   { border-left: 4px solid var(--red); }
-        .card-orange { border-left: 4px solid var(--orange); }
+        /* ── Components — purplecon style ── */
 
+        /* Two-column layout */
         .two-col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5em;
+            gap: 2em;
             text-align: left;
         }
         .three-col {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 1em;
+            gap: 1.2em;
             text-align: left;
         }
 
-        /* ── Giant stat ── */
-        .stat-block { text-align: center; }
-        .stat-block .number { font-size: 4em; font-weight: 900; line-height: 1; }
-        .stat-block .label  { font-size: 0.75em; color: var(--muted); margin-top: 0.3em; }
+        /* Timeline */
+        .timeline-item {
+            display: flex; align-items: flex-start; gap: 1em;
+            margin: 0.55em 0; font-size: 0.7em;
+        }
+        .timeline-time {
+            color: var(--coral); min-width: 4em;
+            font-family: 'Consolas', monospace; font-weight: 700;
+            padding-top: 0.05em;
+        }
+        .timeline-dot  { display: none; } /* removed — text labels convey status */
 
-        /* ── Timeline ── */
-        .timeline-item { display: flex; align-items: flex-start; gap: 0.8em; margin: 0.5em 0; font-size: 0.65em; text-align: left; }
-        .timeline-time { color: var(--muted); min-width: 3.5em; font-family: monospace; padding-top: 0.1em; }
-        .timeline-dot  { width: 8px; height: 8px; border-radius: 50%; margin-top: 0.4em; flex-shrink: 0; }
-        .dot-red    { background: var(--red); }
-        .dot-green  { background: var(--green); }
-        .dot-blue   { background: var(--blue); }
+        /* Checklist */
+        .checklist { list-style: none; padding: 0; font-size: 0.72em; }
+        .checklist li { margin: 0.5em 0; display: flex; gap: 0.6em; }
+        .checklist li::before { content: "✔"; color: var(--lblue); font-weight: 900; flex-shrink: 0; }
 
-        /* ── Checklist ── */
-        .checklist { text-align: left; font-size: 0.68em; list-style: none; padding: 0; }
-        .checklist li { margin: 0.5em 0; display: flex; align-items: flex-start; gap: 0.5em; }
-        .checklist li::before { content: "✓"; color: var(--green); font-weight: 900; flex-shrink: 0; }
-
-        /* ── Quote ── */
+        /* Quote — vertical blue bar, no background box */
         blockquote {
             border: none;
-            border-left: 4px solid var(--blue);
-            padding: 0.7em 1.2em;
-            font-style: italic;
-            font-size: 1.1em;
-            background: var(--bg-card);
-            border-radius: 0 8px 8px 0;
+            border-left: 5px solid var(--lblue);
+            padding: 0.5em 1.2em;
+            font-style: normal;
+            font-size: 1.05em;
+            background: transparent;
             text-align: left;
+            margin: 0.5em 0;
         }
 
-        /* ── Architecture diagram ── */
+        /* Architecture / code diagram */
         .arch {
-            font-family: 'Fira Code', monospace;
-            font-size: 0.42em;
-            line-height: 1.5;
+            font-family: 'Consolas', monospace;
+            font-size: 0.44em;
+            line-height: 1.6;
             text-align: left;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 1.2em;
+            background: var(--bg-dark);
+            padding: 1.2em 1.5em;
             white-space: pre;
         }
 
-        /* ── Tables ── */
-        .reveal table   { font-size: 0.58em; margin: 0 auto; width: 100%; }
-        .reveal table th { background: var(--bg-card); color: var(--blue); padding: 0.7em; }
-        .reveal table td { background: var(--bg); border-color: var(--border); padding: 0.6em; }
+        /* Tables */
+        .reveal table   { font-size: 0.6em; margin: 0 auto; width: 100%; }
+        .reveal table th { background: var(--bg-dark); color: var(--lblue); padding: 0.6em 0.8em; text-align: left; }
+        .reveal table td { background: var(--bg-dark); border-color: #2a2a2f; padding: 0.5em 0.8em; color: var(--lavender); }
+        .reveal table tr:nth-child(even) td { background: #2a2a2f; }
 
-        /* ── Slide label (bottom-right) ── */
-        .slide-label {
-            position: absolute; bottom: -2em; right: 0;
-            font-size: 0.45em; color: var(--muted);
-            font-family: monospace;
+        /* Red callout box — purplecon highlight border */
+        .callout {
+            border: 2.5px solid var(--red-box);
+            padding: 0.5em 0.8em;
+            display: inline-block;
+            margin: 0.3em 0;
         }
 
-        /* ── Tag pills ── */
+        /* Section divider */
+        .transition-slide { text-align: center; }
+        .transition-slide h2 { font-size: 2.8em; color: var(--lblue); }
+        .transition-slide p  { font-size: 1em; color: var(--gray); }
+
+        /* Tag pills */
         .tag {
             display: inline-block;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 0.2em 0.7em;
-            font-size: 0.55em;
-            font-family: monospace;
-            margin: 0.2em;
+            border: 1px solid var(--gray);
+            border-radius: 4px;
+            padding: 0.15em 0.6em;
+            font-size: 0.6em;
+            font-family: 'Consolas', monospace;
+            color: var(--lavender);
+            margin: 0.15em;
         }
 
-        /* ── Section dividers ── */
-        .section-number {
-            font-size: 6em;
-            font-weight: 900;
-            opacity: 0.07;
-            position: absolute;
-            top: -0.2em;
-            left: -0.1em;
-            line-height: 1;
-            pointer-events: none;
-        }
-        .section-title { position: relative; }
-
-        /* ── Live demo banner ── */
-        .demo-banner {
-            background: linear-gradient(135deg, #1a3a1a 0%, #0d1117 100%);
-            border: 2px solid var(--green);
-            border-radius: 12px;
-            padding: 1em 2em;
-            text-align: center;
-        }
-        .demo-banner p { color: var(--green); font-weight: 700; font-size: 1.1em; margin: 0; }
-
-        /* ── Transition slide ── */
-        .transition-slide h2 { font-size: 3em; }
-        .transition-slide p  { font-size: 0.9em; color: var(--muted); }
-
-        /* ── QR code box ── */
+        /* QR code box */
         .qr-box {
             background: #ffffff;
-            border-radius: 12px;
-            padding: 0.6em;
+            border-radius: 8px;
+            padding: 0.5em;
             display: inline-block;
             line-height: 0;
         }
         .qr-label {
             font-size: 0.55em;
-            color: var(--muted);
+            color: var(--gray);
             margin-top: 0.4em;
-            font-family: monospace;
+            font-family: 'Consolas', monospace;
             text-align: center;
         }
 
-        /* ── Speaker notes are hidden from audience via Reveal.js —
-              they only appear in the presenter view (press S).
-              This CSS ensures they never bleed into the main display. ── */
+        /* Demo banner */
+        .demo-banner {
+            border: 2px solid var(--lblue);
+            padding: 0.8em 2em;
+            text-align: center;
+            display: inline-block;
+        }
+        .demo-banner p { color: var(--lblue); font-weight: 700; font-size: 1.1em; margin: 0; }
+
+        /* Layer blocks for architecture slide */
+        .layer-block {
+            background: var(--bg-dark);
+            padding: 0.5em 0.9em;
+            margin: 0.3em 0;
+            font-family: 'Consolas', monospace;
+            font-size: 0.65em;
+        }
+
+        /* ── Speaker notes hidden from main display (presenter view only) ── */
         .reveal aside.notes { display: none !important; }
+
+        /* ── Accessibility: visually-hidden utility for screen-reader-only text ── */
+        .sr-only {
+            position: absolute;
+            width: 1px; height: 1px;
+            padding: 0; margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* ── Focus styles for keyboard navigation ── */
+        .reveal section:focus { outline: 3px solid var(--blue); outline-offset: 4px; }
+        .reveal a:focus       { outline: 3px solid var(--orange); outline-offset: 2px; }
     </style>
 </head>
 <body>
-<div class="reveal">
-<div class="slides">
+<a href="#first-slide" class="sr-only" style="position:absolute;top:0;left:0;z-index:9999;background:var(--bg);color:var(--lblue);padding:0.5em 1em;font-family:'Open Sans',Calibri,sans-serif;font-size:1rem;" tabindex="0">Skip to presentation content</a>
+<div class="reveal" role="main" aria-label="Zero to Pipeline — EuroPython 2026 presentation">
+<div class="slides" id="first-slide">
 
 <!-- ══════════════════════════════════════════
      ABOUT ME  (pre-talk / shown while audience settles)
 ════════════════════════════════════════════ -->
-<section data-background-gradient="radial-gradient(circle at 20% 60%, #0a1a2e 0%, #0d1117 70%)">
-    <div style="display: grid; grid-template-columns: 1fr auto; gap: 4em; align-items: center; max-width: 900px; margin: 0 auto; text-align: left;">
+<section aria-label="About the speaker" style="background:#444349;">
+    <div style="display: grid; grid-template-columns: 1fr auto; gap: 3em; align-items: center; max-width: 860px; margin: 0 auto; text-align: left;">
 
-        <!-- Left: identity — concise -->
         <div>
-            <h2 style="font-size: 1.8em; margin: 0 0 0.15em; color: var(--text); font-weight: 800;">Olusola Akinsulere</h2>
-            <p style="font-size: 0.7em; color: var(--blue); margin: 0 0 1.2em; font-family: monospace; font-weight: 700; letter-spacing: 0.02em;">Engineering Lead · Retailloop</p>
+            <h2 style="font-size: 1.9em; margin: 0 0 0.1em; color: #ffffff; font-weight: 800;">Olusola Akinsulere</h2>
+            <p style="font-size: 0.75em; color: var(--lblue); margin: 0 0 1.0em; font-family: 'Open Sans', sans-serif; font-weight: 700;">Engineering Lead · Retailloop</p>
 
-            <div style="font-size: 0.62em; color: var(--muted); line-height: 2.0;">
-                <div>Builds reliable systems at scale</div>
+            <div style="font-size: 0.65em; color: var(--lavender); line-height: 1.9;">
                 <div>Distributed systems · Payments · Data platforms</div>
                 <div>Python · Backend · Practical ML</div>
             </div>
 
-            <div style="margin-top: 1.4em; font-size: 0.58em; color: var(--muted);">
-                Also building →
-                <a href="https://olusola.xyz" style="color: var(--blue); text-decoration: none; font-weight: 600;">olusola.xyz</a>
+            <div style="margin-top: 1.2em; font-size: 0.62em;">
+                <a href="https://olusola.xyz" style="color: var(--lpurple); text-decoration: none; font-weight: 700;">olusola.xyz</a>
             </div>
         </div>
 
-        <!-- Right: single QR — rendered by qrcode.js at runtime, guaranteed scannable -->
         <div style="text-align: center;">
             <div class="qr-box">
                 <div id="qr-quanta"></div>
-                <!-- fallback if offline: img tag below is hidden when JS runs -->
-                <img id="qr-fallback" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://olusola.xyz" width="140" height="140" alt="QR olusola.xyz" style="display:none"/>
-                <!-- placeholder SVG removed — see script at bottom of file -->
+                <img id="qr-fallback" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=https://olusola.xyz" width="140" height="140" alt="QR code linking to olusola.xyz — speaker website" style="display:none"/>
             </div>
-            <p class="qr-label" style="font-size: 0.6em; margin-top: 0.6em;">olusola.xyz</p>
+            <p class="qr-label" style="font-size: 0.6em; margin-top: 0.5em;" aria-hidden="true">olusola.xyz</p>
         </div>
     </div>
 
     <aside class="notes">
-        ABOUT ME — show while audience settles. Stay on this ~60 seconds.
+        TIMING: Pre-talk. Show while audience settles — stay here ~60 seconds.
 
-        Say: "While you're getting settled — I'm Olusola, Engineering Lead at Retailloop.
-        I build reliable data systems. This talk is about making that easier."
+        "I'm Olusola, Engineering Lead at Retailloop. I build distributed systems
+        and data platforms. This talk is about making ML pipelines easier to connect."
 
-        Point to QR: "QR code takes you to olusola.xyz — find me online there.
-        Scan it now or grab it at the end."
+        Point to QR: "Scan olusola.xyz now or grab it at the end."
 
-        Don't over-explain. Keep it brief. Transition to title slide after ~60 seconds.
+        Keep it brief — we're building to the hands-up question on the next slide.
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      TITLE
 ════════════════════════════════════════════ -->
-<section data-background-gradient="radial-gradient(circle at 30% 50%, #0a2540 0%, #0d1117 60%)">
-    <div style="margin-bottom: 0.3em; font-size: 0.6em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em;">EuroPython 2026 · Data Engineering & MLOps</div>
-    <h1 style="font-size: 2.6em; margin-bottom: 0.2em;">Zero to Pipeline</h1>
-    <p style="font-size: 1.3em; color: var(--text); margin-bottom: 0.1em;">When Data Connectors <span class="green bold">Just Work</span></p>
-    <p class="muted" style="margin-top: 1.5em;">Olusola Akinsulere</p>
+<section aria-label="Talk title: Zero to Pipeline">
+    <p style="font-size: 0.6em; color: var(--gray); margin: 0 0 0.6em;" aria-hidden="true">EuroPython 2026 · Data Engineering &amp; MLOps</p>
+    <h1 style="font-size: 2.8em; margin-bottom: 0.15em; color: var(--lblue);">Zero to Pipeline</h1>
+    <p style="font-size: 1.25em; color: var(--lavender); margin-bottom: 0.1em;">When Data Connectors Just Work</p>
+    <p style="font-size: 0.75em; color: var(--lpurple); margin-top: 1.4em;">Olusola Akinsulere · EuroPython 2026 · Kraków, Poland</p>
 
     <aside class="notes">
-        TITLE SLIDE
+        TIMING: 0:00 — Title slide.
 
-        Open with the audience question — raise your hand if you've spent more than
-        an hour debugging a data connector this year.
+        "Raise your hand if you've spent more than an hour debugging a data connector
+        this year." Pause. Let the hands stay up. Look around the room.
 
-        Let the hands stay up. Look around. Then say:
         "That's what this talk is about. I'm going to show you a different way."
 
-        Timing: ~30 seconds on this slide.
+        30 seconds on this slide — move to the ML lifecycle diagram.
+    </aside>
+</section>
+
+<!-- ══════════════════════════════════════════
+     ML LIFECYCLE CONTEXT (after title)
+════════════════════════════════════════════ -->
+<section aria-label="The ML project lifecycle — data is already in production">
+    <h2 style="font-size: 1.5em; margin-bottom: 0.6em;">Your data is already in production.</h2>
+
+    <div style="text-align: center; margin: 0 auto;">
+        <img src="ml_lifecycle_andrew_ng.png"
+             alt="The ML project lifecycle diagram by Andrew Ng: Scoping → Data → Modeling → Deployment, with feedback loops between stages"
+             style="width: 100%; max-width: 860px; border-radius: 6px;" />
+    </div>
+
+    <p style="font-size: 0.52em; color: var(--gray); margin-top: 0.5em; text-align: right;">
+        Source: Andrew Ng / DeepLearning.AI — MLOps Specialization
+    </p>
+
+    <aside class="notes">
+        TIMING: ~1:00 — Slide 4, right after title.
+
+        "This is Andrew Ng's ML lifecycle. Look at the loop between Deployment and Data.
+        Your data is already in production — MLflow tracking experiments, Prometheus
+        watching model serving, Feast serving features, Airflow running jobs.
+        It's deployed, running, and generating data right now.
+
+        But to close that loop — to pull production data back for retraining —
+        you have to connect to all of it.
+
+        And that's where afternoons die. The next slide is one such afternoon."
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 1: OPENER (0:00–2:00)
 ════════════════════════════════════════════ -->
-<section>
-    <div class="muted" style="font-family: monospace; text-align: left; font-size: 0.7em; margin-bottom: 1.5em;">0:00 — 2:00 / The Problem</div>
+<section aria-label="A familiar afternoon — timeline of a frustrating workday">
+    <div class="gray" style="font-family: monospace; text-align: left; font-size: 0.7em; margin-bottom: 1.5em;" aria-hidden="true">0:00 — 2:00 / The Problem</div>
     <h2>A familiar afternoon</h2>
 
-    <div class="timeline-item">
+    <div class="timeline-item" role="listitem">
         <span class="timeline-time">14:00</span>
-        <div class="timeline-dot dot-blue"></div>
-        <span>"Pull last week's model inference logs from our feature store. Should be quick."</span>
+        <div class="timeline-dot dot-blue" aria-hidden="true"></div>
+        <span>"Pull last week's prediction logs from our feature store — it's in production. Should be quick."</span>
     </div>
-    <div class="timeline-item fragment">
+    <div class="timeline-item fragment" role="listitem">
         <span class="timeline-time">14:45</span>
-        <div class="timeline-dot dot-red"></div>
-        <span class="red">The feature store API needs OAuth. Reading docs for the third time.</span>
+        <div class="timeline-dot dot-red" aria-hidden="true"></div>
+        <span><span class="sr-only">Problem: </span><span class="coral">The feature store API needs OAuth. Reading docs for the third time.</span></span>
     </div>
-    <div class="timeline-item fragment">
+    <div class="timeline-item fragment" role="listitem">
         <span class="timeline-time">15:30</span>
-        <div class="timeline-dot dot-red"></div>
-        <span class="red">"My token works in curl but the SDK throws 403. Different header format?"</span>
+        <div class="timeline-dot dot-red" aria-hidden="true"></div>
+        <span><span class="sr-only">Problem: </span><span class="coral">"My token works in curl but the SDK throws 403. Different header format?"</span></span>
     </div>
-    <div class="timeline-item fragment">
+    <div class="timeline-item fragment" role="listitem">
         <span class="timeline-time">16:15</span>
-        <div class="timeline-dot dot-red"></div>
-        <span class="red">Writing a custom paginator for 50k rows of prediction results. Again.</span>
+        <div class="timeline-dot dot-red" aria-hidden="true"></div>
+        <span><span class="sr-only">Problem: </span><span class="coral">Writing a custom paginator for 50k rows of prediction results. Again.</span></span>
     </div>
-    <div class="timeline-item fragment">
+    <div class="timeline-item fragment" role="listitem">
         <span class="timeline-time">17:00</span>
-        <div class="timeline-dot dot-red"></div>
-        <span class="red">Pipeline fails on retry. Cursor state lost. Full re-fetch. Model training delayed.</span>
+        <div class="timeline-dot dot-red" aria-hidden="true"></div>
+        <span><span class="sr-only">Critical failure: </span><span class="coral">Pipeline fails on retry. Cursor state lost. Full re-fetch. Model training delayed.</span></span>
     </div>
 
     <aside class="notes">
-        TIMING: 0:00 — build slowly, one click per timeline entry.
+        TIMING: ~1:30 — Slides 5-8, one click per entry. Build slowly.
 
-        This is not fiction — pause after each red dot.
-        Let the audience feel the familiar sting of each moment.
+        "That Deployment→Data loop? This is what it looks like in practice."
 
-        14:00 — innocent start. They've all been here.
-        14:45 — OAuth. Every. Single. Time.
-        15:30 — the SDK works in curl but not in code. 20 minutes debugging header casing.
-        16:15 — this is the third time this month writing a paginator. It's never the last.
-        17:00 — the real cost: model training delayed. Data science team waiting. Sprint blocked.
+        14:00 — innocent start. It's already in production. Should be quick.
+        14:45 — OAuth. Reading the docs for the third time.
+        15:30 — token works in curl, SDK throws 403. Different header format.
+        16:15 — writing a custom paginator for 50k rows. Again. Not the first time this month.
+        17:00 — the real cost: cursor lost, full re-fetch, model training delayed, sprint blocked.
 
-        Key message: "The pain is not in the ML. It's in the plumbing."
-        Pause here. Let it land.
+        Pause after 17:00. Let it land.
+        "The pain is not in the ML. It's in the plumbing."
+        Everything in this talk is a direct response to these five timestamps.
     </aside>
 </section>
 
-<section>
+<section aria-label="The problem: two blocked engineers">
     <div class="two-col" style="font-size: 0.72em; text-align: left; margin-bottom: 1em;">
         <div class="card card-red">
-            <p style="margin: 0; font-size: 0.9em;"><strong class="red">ML Engineer</strong> waiting on feature data<br>
+            <p style="margin: 0; font-size: 0.9em;"><strong class="coral">ML Engineer</strong> waiting on feature data<br>
             from the experiment tracker</p>
         </div>
         <div class="card card-red">
-            <p style="margin: 0; font-size: 0.9em;"><strong class="red">Data Engineer</strong> debugging why<br>
+            <p style="margin: 0; font-size: 0.9em;"><strong class="coral">Data Engineer</strong> debugging why<br>
             the monitoring API pagination breaks at page 47</p>
         </div>
     </div>
@@ -330,80 +365,78 @@
         "We don't have a shortage of data.<br>
         We have a shortage of <strong>time to connect it.</strong>"
     </blockquote>
-    <p class="muted" style="margin-top: 0.8em; font-size: 0.65em;">Every ML platform team, every sprint, everywhere</p>
+    <p class="gray" style="margin-top: 0.8em; font-size: 0.65em;">Every ML platform team, every sprint, everywhere</p>
 
     <aside class="notes">
-        TIMING: ~1:30 into the talk.
+        TIMING: ~1:30 — two people paying for the same problem.
 
-        The data exists. The model needs it. The gap is ALWAYS the connector.
-        MLflow, W&B, feature stores, experiment trackers — every tool is different.
-        Different auth headers, different pagination, different error formats.
+        "Remember 14:45 and 16:15? These are the two people in those moments."
 
-        Read the two cards to the audience slowly.
-        Left: ML Engineer blocked waiting on feature data.
-        Right: Data Engineer debugging page 47 of 500.
+        Left card: ML Engineer waiting on feature data — that's 14:00.
+        Right card: Data Engineer on page 47 of 500 — that's 16:15.
+        Different roles. Same broken afternoon. Every sprint.
 
-        These are not edge cases. This is every sprint.
-
-        Then deliver the quote — let it sit for 2 seconds before clicking.
+        Deliver the quote slowly. Let it sit 2 seconds before clicking.
+        "We don't have a shortage of data. We have a shortage of time to connect it."
     </aside>
 </section>
 
-<section>
+<section aria-label="The solution: three commands, any API">
     <h2>What if it looked like this instead?</h2>
     <pre><code class="language-bash" data-trim>
-# Your model needs prediction logs from the monitoring API
-pipeline source add mlflow            # experiment tracker
-pipeline source add wandb             # W&B runs
-pipeline source add your-feature-store  # internal API
+# That feature store from this afternoon:
+pipeline source add my-feature-store \
+    --base-url https://features.internal.mycompany.com
 
 # Auth goes to OS keychain — not your .env
-pipeline auth set mlflow
+pipeline auth set my-feature-store
 
 # Data flows — paginated, checkpointed, incrementally
-pipeline sync run mlflow
-# Done: 8,421 experiment runs extracted
-# Output: ~/.zero-pipeline/output/mlflow/runs.jsonl
+pipeline sync run my-feature-store
+# Done: 50,284 prediction records extracted
+# Cursor saved. Next run fetches only what changed.
     </code></pre>
     <p class="fragment green bold" style="font-size: 1.2em; margin-top: 0.8em;">Three commands. Any API. Zero config files.</p>
 
     <aside class="notes">
-        TIMING: ~1:50. This is the promise slide — land it with confidence.
+        TIMING: ~1:50 — the promise. Land it with confidence.
 
-        Say it slowly: "Three commands. Any API. Zero config files."
-        Let "zero config files" hang in the air.
+        "That feature store from 14:00 that took all afternoon? Three commands."
+        Say slowly: "Three commands. Any API. Zero config files."
+        Let "zero config files" hang.
 
-        Then add: "I know what you're thinking — that sounds too good to be true.
-        That's exactly why I'm here. I'm going to show you the engineering that
-        makes this real. And I'll be honest about where the limits are."
+        "I know what you're thinking — sounds too good to be true.
+        I'm going to show you the engineering behind this. And I'll be honest
+        about where the limits are."
 
-        Don't click yet — wait for the fragment to appear naturally.
+        Wait for the fragment, then move to Section 2.
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 2: "JUST WORK" (2:00–6:00)
 ════════════════════════════════════════════ -->
-<section class="transition-slide">
-    <div class="muted" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;">2:00 — 6:00</div>
-    <h2>What does<br>"Just Work" <span class="purple">actually</span> mean?</h2>
-    <p class="muted">Defining success criteria honestly</p>
+<section class="transition-slide" aria-label="Section 2: Defining what 'just work' actually means">
+    <div class="gray" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;" aria-hidden="true">2:00 — 6:00</div>
+    <h2>What does<br>"Just Work" <span class="lpurple">actually</span> mean?</h2>
+    <p class="gray">Defining success criteria honestly</p>
 
     <aside class="notes">
-        TIMING: 2:00 — Section 2 starts here.
+        TIMING: 2:00 — Section 2. Set expectations honestly before showing any code.
 
-        "Before I show you the code, let me be specific about what I mean by 'just works'.
-        Because if I just say 'it works', that's a red flag at a technical conference."
+        "Before I show you the engineering, let me be specific about what I mean
+        by 'just works'. Because if I just say 'it works', that's a red flag
+        at a technical conference."
 
-        This sets up credibility. Engineers are sceptical — be the first to acknowledge it.
+        This credibility moment is intentional. Engineers are sceptical — be first.
     </aside>
 </section>
 
-<section>
+<section aria-label="The success criteria: what 'just work' means and doesn't mean">
     <h2>The success criteria</h2>
     <div class="two-col" style="margin-top: 0.5em;">
         <div>
-            <h3 class="green">It means ✓</h3>
+            <h3 class="lblue">It means ✓</h3>
             <ul class="checklist" style="font-size: 0.65em;">
                 <li>First sync in under 5 minutes</li>
                 <li>Sane defaults for 90% of APIs</li>
@@ -414,8 +447,8 @@ pipeline sync run mlflow
             </ul>
         </div>
         <div>
-            <h3 class="red">It does NOT mean ✗</h3>
-            <ul style="font-size: 0.65em; color: var(--muted); text-align: left; list-style: none; padding: 0;">
+            <h3 class="coral">It does NOT mean ✗</h3>
+            <ul style="font-size: 0.65em; color: var(--gray); text-align: left; list-style: none; padding: 0;">
                 <li style="margin: 0.5em 0;">✗ No debugging ever needed</li>
                 <li style="margin: 0.5em 0;">✗ Skip security review</li>
                 <li style="margin: 0.5em 0;">✗ Works for every edge case</li>
@@ -426,28 +459,31 @@ pipeline sync run mlflow
     </div>
 
     <aside class="notes">
-        TIMING: 2:30.
+        TIMING: 2:30 — Slides 9-11. Walk both columns. Be honest.
 
-        Walk through each green bullet. Pause on "idempotent re-runs" — explain why this matters
-        for ML: "If your training job re-runs, you need the same data. Always."
+        Green bullets: pause on "idempotent re-runs."
+        "If your retraining job re-runs at 2am, you need the same data. Always.
+        That's what idempotent means here — and why checkpointing matters."
 
-        Then walk through the red column. Point at "No debugging ever" and say:
-        "If someone promises you this, run. This framework surfaces problems — it doesn't hide them."
+        Red column: point at "No debugging ever needed" first.
+        "If someone promises you this, run. This framework surfaces problems,
+        it doesn't hide them. We're removing toil, not engineering."
 
-        Key line: "We're removing TOIL, not engineering."
+        Then: "The right column is exactly what we saw at 17:00 — cursor lost,
+        re-fetch from zero. Those are the problems the green list solves."
     </aside>
 </section>
 
-<section>
+<section aria-label="The spectrum: from manual to self-configuring data connectors">
     <h2>The spectrum</h2>
     <div style="margin: 1.5em 0; font-size: 0.8em;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5em;">
-            <span class="red">Manual</span>
-            <span class="orange">Config-driven</span>
-            <span class="green">Self-configuring</span>
+            <span class="coral">Manual</span>
+            <span class="lpurple">Config-driven</span>
+            <span class="lblue">Self-configuring</span>
         </div>
         <div style="height: 6px; background: linear-gradient(to right, var(--red), var(--orange), var(--green)); border-radius: 3px;"></div>
-        <div style="display: flex; justify-content: space-between; margin-top: 0.5em; font-size: 0.7em; color: var(--muted);">
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5em; font-size: 0.7em; color: var(--gray);">
             <span>Write everything</span>
             <span>Configure most things</span>
             <span>Name + credential</span>
@@ -458,73 +494,70 @@ pipeline sync run mlflow
     </div>
 
     <aside class="notes">
-        TIMING: 4:00.
+        TIMING: 4:00 — the spectrum. This bridges to architecture.
 
-        Point at the gradient bar and say:
-        "Most teams live here [point to middle]. Config files, some automation.
-        We're going to push you here [point right] for the first-time experience,
-        while keeping the escape hatches on the left available."
+        "Most teams live in the middle — some config, some automation.
+        We push you right for the first-time experience, with escape hatches to the left."
 
-        "You can always --base-url your way back to manual control. That's by design."
+        "The --base-url and --auth-type flags you'll see in the demo are those escape hatches.
+        Full manual control is always one flag away."
 
-        Click to the green card fragment — pause on it.
+        Click to the green card fragment.
+        "Built for the right. Debuggable from the left. Now let me show you how."
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 3: ARCHITECTURE (6:00–12:00)
 ════════════════════════════════════════════ -->
-<section class="transition-slide">
-    <div class="muted" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;">6:00 — 12:00</div>
+<section class="transition-slide" aria-label="Section 3: Architecture — the moving parts">
+    <div class="gray" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;" aria-hidden="true">6:00 — 12:00</div>
     <h2>Architecture</h2>
-    <p class="muted">The moving parts</p>
+    <p class="gray">The moving parts</p>
 </section>
 
-<section>
+<section aria-label="High-level architecture: five layers from LLM discovery to output">
     <h2>High-level flow</h2>
-    <div class="arch">┌─────────────────────────────────────────────────────────┐
-│  ML Engineer: <span class="blue">"add MLflow as a source and sync my runs"</span>  │
+    <div class="arch" role="img" aria-label="Architecture diagram: Layer 1 — Provider Registry and LLM Discovery. Layer 2 — Auth/Keyring, Self-Healing Connector, Pagination. Layer 3 — Pipeline Orchestrator with checkpoint, retry, DAG, incremental sync. Layer 4 — Output to JSONL, S3, database, or warehouse.">┌─────────────────────────────────────────────────────────┐
+│  ML Engineer: <span class="lblue">"add MLflow as a source and sync my runs"</span>  │
 └─────────────────────────┬───────────────────────────────┘
                           ▼
      ┌────────────────────────────────────────────────┐
-     │          <span class="orange">Provider Registry + LLM Discovery</span>         │
+     │          <span class="lpurple">Provider Registry + LLM Discovery</span>         │
      │  Preset (mlflow/wandb/...) ── LLM enriches all  │
      └────────────────┬───────────────────────────────┘
                       ▼
   ┌──────────┐  ┌──────────────┐  ┌─────────────────┐
-  │  <span class="blue">Auth /</span>   │  │  <span class="orange">Self-Healing</span>  │  │   <span class="green">Pagination</span>    │
-  │  <span class="blue">Keyring</span>  │  │  <span class="orange">Connector</span>    │  │  <span class="green">Cursor/GQL</span>    │
+  │  <span class="lblue">Auth /</span>   │  │  <span class="lpurple">Self-Healing</span>  │  │   <span class="lblue">Pagination</span>    │
+  │  <span class="lblue">Keyring</span>  │  │  <span class="lpurple">Connector</span>    │  │  <span class="lblue">Cursor/GQL</span>    │
   └────┬─────┘  └──────┬───────┘  └────────┬────────┘
        └──────────────┬─┘──────────────────┘
                       ▼
   ┌───────────────────────────────────────────────────┐
-  │         <span class="purple">Pipeline Orchestrator (asyncio)</span>            │
+  │         <span class="lpurple">Pipeline Orchestrator (asyncio)</span>            │
   │   Checkpoint · Retry · DAG · Incremental sync    │
   └─────────────────────┬─────────────────────────────┘
                         ▼
   ┌───────────────────────────────────────────────────┐
-  │           <span class="green">Output: JSONL → S3 → DB → Warehouse</span>     │
+  │           <span class="lblue">Output: JSONL → S3 → DB → Warehouse</span>     │
   └───────────────────────────────────────────────────┘</div>
 
     <aside class="notes">
-        TIMING: 6:00 — Architecture section starts.
+        TIMING: 6:00 — Architecture overview. Five layers, each resolves a pain point.
 
-        "Here's the full picture. Five layers. Let me walk through each one."
+        Point to each block as you name it — don't read the diagram:
+        1. Provider Registry + LLM → resolves the "reading docs for the third time" at 14:45
+        2. Auth / Keyring → resolves the .env file risk and the 403 at 15:30
+        3. Self-Healing Connector → resolves "token works in curl" at 15:30
+        4. Pagination → resolves "writing a custom paginator again" at 16:15
+        5. Orchestrator + Checkpoint → resolves "cursor state lost" at 17:00
 
-        Don't read the diagram out loud — point to each block as you name it:
-        1. Provider Registry + LLM — "this is how we figure out what the API looks like"
-        2. Auth / Keyring — "this is how we store credentials safely"
-        3. Self-Healing Connector — "this is how we handle API quirks automatically"
-        4. Pagination — "this is how we walk through large datasets"
-        5. Orchestrator — "this is how we make it reliable and resumable"
-        6. Output — "JSONL today, your warehouse tomorrow"
-
-        Move quickly — 45 seconds max on this slide.
+        45 seconds max — the next five slides go deep on each layer.
     </aside>
 </section>
 
 <section>
-    <h2><span class="blue">Layer 1:</span> Discovery</h2>
+    <h2><span class="lblue">Layer 1:</span> Discovery</h2>
     <pre><code class="language-python" data-trim>
 # LLM enrichment runs for ALL providers — preset or not
 
@@ -533,137 +566,128 @@ config = registry.infer_config("mlflow")   # starts from preset
 # LLM may add: new endpoints, current rate limits, auth quirks
 # Result: source = "preset+llm"
 
-# Unknown provider (your-feature-store): LLM discovers everything
-config = registry.infer_config("your-feature-store")
-# LLM discovers: base_url, auth_type, pagination, endpoints
-# Falls back to name-based inference if no LLM available
+# Unknown provider (my-feature-store): LLM discovers everything
+config = registry.infer_config("my-feature-store")
+# LLM discovers: base_url, auth_type=bearer, pagination=cursor, endpoints
+# For truly unknown APIs with no URL hint — name-based inference as last resort
 # Result: source = "llm_discovered"  or  "inferred"
     </code></pre>
     <div class="fragment card card-orange" style="margin-top: 0.7em; text-align: center;">
         <p style="margin: 0; font-size: 0.7em;">
             Presets are <strong>demo accelerators</strong> — the LLM runs for every provider.
-            The system works without both.
+            LLM credentials must be configured before running.
         </p>
     </div>
 
     <aside class="notes">
-        TIMING: 7:30.
+        TIMING: 7:30 — Layer 1 resolves 14:45: "reading the docs for the third time."
 
-        Read the top code block: "For mlflow — which IS in our registry — the LLM still
-        runs. It might know about endpoints we haven't registered yet."
+        "For MLflow — a known provider — the LLM still enriches the preset.
+        It might know about newer endpoints, current rate limits, auth quirks.
+        For my-feature-store — something it's never seen — the LLM discovers everything."
 
-        Read the bottom block: "For your-feature-store — which nobody has ever seen —
-        the LLM discovers the whole thing. Or if there's no LLM, we infer from the name."
+        "This is what you would have spent 14:45 to 15:00 doing manually.
+        The LLM does it once, saves it to config, never asks again."
 
-        Key point to emphasise: "The LLM is not required. The system degrades gracefully.
-        That's important for offline environments or air-gapped ML infrastructure."
-
-        Point at the orange card fragment: "The word 'only' before 'demo accelerators' is load-bearing."
+        Point at the orange card: "Presets accelerate. LLM covers the gaps."
     </aside>
 </section>
 
 <section>
-    <h2><span class="blue">Layer 2:</span> Credentials</h2>
+    <h2><span class="lblue">Layer 2:</span> Credentials</h2>
     <div class="two-col">
         <div>
             <div class="card card-red" style="font-size: 0.65em; margin-bottom: 0.8em;">
-                <h3 class="red" style="font-size: 0.9em; margin: 0 0 0.3em;">Old way 😬</h3>
+                <h3 class="coral" style="font-size: 0.9em; margin: 0 0 0.3em;">Old way 😬</h3>
                 <pre style="font-size: 0.85em; margin: 0;"><code data-trim>
 # .env file
-MLFLOW_TRACKING_TOKEN=mlf_abc123...
-WANDB_API_KEY=wand_xyz789...
+FEATURE_STORE_TOKEN=tok_abc123...
+MLFLOW_TRACKING_TOKEN=mlf_xyz789...
 # config.yaml
-mlflow:
-  token: ${MLFLOW_TRACKING_TOKEN}
+feature_store:
+  token: ${FEATURE_STORE_TOKEN}
                 </code></pre>
-                <p style="margin: 0.3em 0 0; color: var(--red); font-size: 0.8em;">One git commit away from a breach.</p>
+                <p style="margin: 0.3em 0 0; color: var(--coral); font-size: 0.8em;">One git commit away from a breach.</p>
             </div>
         </div>
         <div>
             <div class="card card-green" style="font-size: 0.65em;">
-                <h3 class="green" style="font-size: 0.9em; margin: 0 0 0.3em;">New way ✓</h3>
+                <h3 class="lblue" style="font-size: 0.9em; margin: 0 0 0.3em;">New way ✓</h3>
                 <pre style="font-size: 0.85em; margin: 0;"><code data-trim>
 # Token goes straight to
 # macOS Keychain / Linux
 # Secret Service
-pipeline auth set mlflow
+pipeline auth set my-feature-store
 # Enter API token: ****
 # Stored securely.
                 </code></pre>
-                <p style="margin: 0.3em 0 0; color: var(--green); font-size: 0.8em;">Never touches disk as plaintext.</p>
+                <p style="margin: 0.3em 0 0; color: var(--lblue); font-size: 0.8em;">Never touches disk as plaintext.</p>
             </div>
         </div>
     </div>
 
     <aside class="notes">
-        TIMING: 9:00.
+        TIMING: 9:00 — Layer 2. The credential problem that came up at 14:45.
 
-        Read the red card: "This is how most teams do it. One accidental git push
-        and your API key is in someone's GitHub search results. It happens weekly."
+        Red card: "One accidental git push and your API token is in a GitHub search result.
+        It happens weekly. You probably have a .env in a 'private' repo right now."
+        (pause — let the room acknowledge this)
 
-        Read the green card: "Token → keychain. Same security model as your password manager."
+        Green card: "Token goes straight to the OS keychain. Same security model as
+        your password manager. Never touches disk as plaintext. Never enters git history."
 
-        Throw in: "Show of hands — how many of you have a .env file in a private repo
-        that you HOPE no one ever accidentally makes public?"
-        (pause, acknowledge the honesty)
-
-        "This removes that category of risk entirely."
+        "In the demo, you'll see Linear is the only provider that needs a token —
+        and it's stored here. Feast, MLflow, Prometheus: all local, no credentials needed."
     </aside>
 </section>
 
 <section>
-    <h2><span class="blue">Layer 3:</span> Self-Healing</h2>
+    <h2><span class="lblue">Layer 3:</span> Self-Healing</h2>
     <pre><code class="language-python" data-trim>
-# MLflow uses token auth but rejects "Bearer" prefix on some versions.
-# You wouldn't know this until your first 401 in production.
+# "My token works in curl but the SDK throws 403."  — slide 4, 15:30
+# The healing connector figures it out automatically.
 
-# Without self-healing:
-#   401 → read docs → fix config → redeploy → training job delayed
-
-# With self-healing:
-connector = SelfHealingConnector("http://mlflow-server:5000", "mlf_tok_abc123")
+connector = SelfHealingConnector("https://features.internal.co", "tok_abc123")
 
 # Internally:
-#   Try 1: "Authorization: Bearer mlf_tok_abc123" → 401 ✗
-#   Try 2: "Authorization: mlf_tok_abc123"        → 200 ✓
+#   Try 1: "Authorization: Bearer tok_abc123" → 403 FAIL ✗
+#   Try 2: "Authorization: tok_abc123"        → 200 OK   ✓
 #   Learned! All subsequent requests use the corrected format.
     </code></pre>
     <p class="fragment muted">Tries: Bearer · raw token · token prefix · X-API-Key · Api-Key</p>
 
     <aside class="notes">
-        TIMING: 10:00.
+        TIMING: 10:00 — Layer 3. This is what resolved 15:30.
 
-        Read the code slowly — point to each line:
-        "Try 1: Bearer lin_abc123 — 401. Standard format, still wrong."
-        "Try 2: lin_abc123 with no prefix — 200. Success."
-        "Now it remembers. The next 10,000 requests use the correct format."
+        "Remember 15:30? Token works in curl but the SDK throws 403.
+        Different header format. Twenty minutes debugging header casing. That's exactly this."
 
-        Then say: "Every API is slightly different. MLflow might want 'Bearer'.
-        Prometheus might want nothing. Your internal feature store might want a custom header.
-        The healing connector figures it out without you doing anything."
+        "Try 1: Bearer — 403. Try 2: raw token — 200. Saved. The next 10,000 requests
+        use the correct format. No config change. No ticket. No one woken up."
 
-        "The healing history is also logged — so if it fires a lot, you know
-        something changed upstream. That's an alert-worthy signal."
+        "The healing_success event in the logs is worth monitoring. If it fires
+        repeatedly on a stable pipeline, the upstream API changed its auth format.
+        That's a drift signal."
     </aside>
 </section>
 
 <section>
-    <h2><span class="blue">Layer 4:</span> Universal Pagination</h2>
+    <h2><span class="lblue">Layer 4:</span> Universal Pagination</h2>
     <div class="three-col" style="font-size: 0.62em; gap: 0.8em; margin-top: 0.5em;">
         <div class="card card-blue">
             <h3 style="font-size: 0.9em; margin: 0 0 0.5em;">Cursor</h3>
             <code style="font-size: 0.8em;">next_cursor → start_cursor</code>
-            <p class="muted" style="font-size: 0.8em; margin: 0.3em 0 0;">W&amp;B, Prefect, Airflow</p>
+            <p class="gray" style="font-size: 0.8em; margin: 0.3em 0 0;"><strong style="color:var(--lblue);">my-feature-store</strong>, W&amp;B, Prefect</p>
         </div>
         <div class="card card-orange">
             <h3 style="font-size: 0.9em; margin: 0 0 0.5em;">Offset</h3>
             <code style="font-size: 0.8em;">page=1 → page=2...</code>
-            <p class="muted" style="font-size: 0.8em; margin: 0.3em 0 0;">MLflow, Grafana, most REST APIs</p>
+            <p class="gray" style="font-size: 0.8em; margin: 0.3em 0 0;"><strong style="color:var(--lpurple);">MLflow</strong>, Grafana, most REST APIs</p>
         </div>
         <div class="card card-purple">
             <h3 style="font-size: 0.9em; margin: 0 0 0.5em;">GraphQL</h3>
             <code style="font-size: 0.8em;">pageInfo.endCursor</code>
-            <p class="muted" style="font-size: 0.8em; margin: 0.3em 0 0;">W&amp;B runs, GitHub Actions</p>
+            <p class="gray" style="font-size: 0.8em; margin: 0.3em 0 0;">W&amp;B runs, GitHub Actions</p>
         </div>
     </div>
     <pre class="fragment" style="margin-top: 0.8em;"><code class="language-python" data-trim>
@@ -673,86 +697,105 @@ pagination = connector.infer_pagination(sample_response)
     </code></pre>
 
     <aside class="notes">
-        TIMING: 11:00.
+        TIMING: 11:00 — Layer 4. This is what resolved 16:15.
 
-        Point to each card: "MLflow uses offset pagination — page 1, page 2.
-        W&B uses GraphQL cursors. Prometheus just returns everything."
+        "Remember 16:15? Writing a custom paginator for 50k rows. Again.
+        This is what removes that entirely."
+
+        Point to each card: "MLflow uses offset — page 1, page 2.
+        W&B uses GraphQL cursors. Your feature store? Cursor-based."
 
         Read the auto-infer code: "The connector samples one response and detects
-        which pattern is in use. You don't specify it."
-
-        Quick: "This matters at scale. Offset pagination on 50k experiment runs
-        without cursor tracking means full re-fetch on every restart."
+        which pattern is in use. You don't declare it. In the demo you'll see
+        MLflow returning a page_token — the connector follows it automatically."
     </aside>
 </section>
 
 <section>
-    <h2><span class="blue">Layer 5:</span> Orchestration</h2>
+    <h2><span class="lblue">Layer 5:</span> Orchestration</h2>
     <pre><code class="language-python" data-trim>
-# DAG pipeline — independent steps run in parallel
-pipeline = Pipeline("mlops-data-ingest")
-pipeline.add_step("extract_mlflow",     extract_mlflow_runs_fn)
-pipeline.add_step("extract_wandb",      extract_wandb_runs_fn)
-pipeline.add_step("extract_prometheus", extract_metrics_fn)
-pipeline.add_step("transform", transform_fn,
-    depends_on=["extract_mlflow", "extract_wandb", "extract_prometheus"])
+# The exact pipeline you'll see in the demo
+pipeline = Pipeline("demo-pipeline")
+pipeline.add_step("extract_feature_store", extract_feature_store)
+pipeline.add_step("extract_mlflow",        extract_mlflow)
+pipeline.add_step("create_linear_issues",  create_issues,
+    depends_on=["extract_feature_store", "extract_mlflow"])
 
 result = await engine.run(pipeline)
-# Steps 1-3 run in parallel — all three sources extract at once
-# Step 4 runs when all three complete
+# Steps 1-2 run in parallel — feature store + MLflow at the same time
+# Step 3 runs when both complete — Linear issue created, sprint unblocked
     </code></pre>
 
     <aside class="notes">
-        TIMING: 11:30.
+        TIMING: 11:30 — Layer 5. This is what resolved 17:00.
 
-        Walk the code: "Three add_step calls. Then engine.run().
-        Steps 1-3 run in parallel. Step 4 waits for all three."
+        "Remember 17:00? Cursor state lost. Full re-fetch. Training delayed.
+        The checkpoint is what prevents that. Crash at step 2 — restart picks up there,
+        not from zero."
 
-        "No Temporal. No Celery. No infrastructure.
-        For single-machine MLOps pipelines, asyncio is enough —
-        and you can debug it with a plain Python debugger."
+        "Two extraction steps run in parallel. When both finish, Linear runs.
+        No Temporal. No Celery. asyncio is enough. Debug it with pdb."
 
-        "When you need distributed execution, you'd swap the engine for Temporal.
-        But most teams don't. I'll come back to this at the end."
+        "This exact pipeline is what you'll see me run live in 30 seconds.
+        Let's go."
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 4: LIVE DEMO (12:00–17:00)
 ════════════════════════════════════════════ -->
-<section class="transition-slide">
-    <div class="muted" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;">12:00 — 17:00</div>
+<section class="transition-slide" aria-label="Section 4: Live demo — zero to pipeline in real time">
+    <div class="gray" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;" aria-hidden="true">12:00 — 17:00</div>
     <div class="demo-banner">
         <p>🎬 Live Demo</p>
     </div>
-    <p class="muted" style="margin-top: 1em;">Zero to pipeline in real time</p>
+    <p class="gray" style="margin-top: 1em;">Zero to pipeline in real time</p>
+
+    <!-- Fallback button — hidden until needed. Click to open Loom recording. -->
+    <div id="fallback-btn-wrapper" style="position: absolute; bottom: 1.2em; right: 1.2em; opacity: 0.25; transition: opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.25'">
+        <button onclick="openFallbackVideo()"
+                style="background: var(--bg-dark); border: 1.5px solid var(--gray); color: var(--gray);
+                       font-family: 'Consolas', monospace; font-size: 0.55em; padding: 0.4em 0.9em;
+                       border-radius: 4px; cursor: pointer; letter-spacing: 0.05em;"
+                aria-label="Open fallback demo video">
+            📹 backup
+        </button>
+    </div>
 
     <aside class="notes">
         TIMING: 12:00 — SWITCH TO TERMINAL NOW.
 
-        Demo script (have this open in a separate note on your phone):
-        1.  pipeline doctor
-        2.  pipeline source add mlflow
-        3.  pipeline source add my-feature-store --base-url https://features.internal.co
-        4.  pipeline auth set mlflow  (use your real MLflow token)
-        5.  pipeline source test mlflow
-        6.  pipeline sync run mlflow
-        7.  cat ~/.zero-pipeline/output/mlflow/runs.jsonl | head -1 | python -m json.tool
-        8.  pipeline sync run mlflow   (show incremental — only new runs)
-        9.  pipeline sync status
-        10. pipeline chat "add notion as a source"
+        Complete demo script (keep on phone as backup):
 
-        FALLBACK if internet is down: pre-recorded terminal gif.
-        FALLBACK if token fails: switch to --no-heal flag and explain the error.
+        ACT 1 — Health check (20s)
+          pipeline doctor
 
-        Total demo time: ~5 minutes. Stay focused.
-        2. pipeline source add linear
-        3. pipeline auth set linear (use real Linear token)
-        4. pipeline sync run linear
-        5. cat ~/.zero-pipeline/output/linear/graphql.jsonl | head -1 | python -m json.tool
-        6. pipeline sync run linear (show incremental)
-        7. pipeline source add freshdesk (unknown API)
-        8. pipeline chat "add notion as a source"
+        ACT 2 — Start services (20s)
+          uv run python -m fraud_demo.setup
+          (Feast 6566, MLflow 5001, Prometheus 9090 — all confirmed up)
+
+        ACT 3 — Add Feast: no auth, preset (30s)
+          pipeline source add feast --force
+          pipeline source test feast
+
+        ACT 4 — Add MLflow: preset + LLM, local no-auth (30s)
+          pipeline source add mlflow --base-url http://127.0.0.1:5001 --auth-type none --force
+          pipeline source test mlflow
+
+        ACT 5 — First sync: 13 runs, 3 pages of 5 (45s)
+          pipeline sync run mlflow
+          → Done: 13 records extracted
+
+        ACT 6 — Incremental sync: cursor resumes (20s)
+          pipeline sync run mlflow
+          → Resuming from cursor. Done: 3 records
+          pipeline sync status
+
+        ACT 7 — Full fraud pipeline (90s)
+          uv run python -m fraud_demo.run_pipeline
+          → Feast + 15k transactions → train → MLflow → Prometheus → Linear. 4.4 seconds.
+
+        FALLBACK: hover bottom-right → click backup → Loom overlay plays.
     </aside>
 </section>
 
@@ -770,131 +813,152 @@ All checks passed!
     </code></pre>
 
     <aside class="notes">
-        TIMING: 12:30. Point at the four green OKs.
-        "Four checks. Keyring, registry, checkpoint dir, source store.
-        All green. We're ready."
-        Move quickly — 10 seconds on this slide.
+        TIMING: 12:30 — Health check first, always.
+
+        Run: pipeline doctor
+
+        "Four green OKs. Keyring accessible, registry loaded, checkpoint dir writable,
+        source store accessible. This is how we know the environment is ready before
+        touching any data."
+
+        10 seconds max. Move immediately to adding Feast.
+    </aside>
+</section>
+
+<section>
+    <h2>Demo: Add Feast — the feature store</h2>
+    <pre><code class="language-bash" data-trim>
+$ pipeline source add feast --force
+
+  ✓ Registry: preset found for 'feast'
+  → LLM: enriching with deeper knowledge...
+  ✓ Saved to: ~/.zero-pipeline/sources/feast/config.json
+
+Source 'Feast' added  (from: preset+llm)
+  Base URL: http://127.0.0.1:6566
+  Auth:     none   ← local Feast needs no token
+  Endpoint: /get-online-features
+
+No credentials needed — this source runs without authentication.
+
+$ pipeline source test feast
+Connection to feast successful!
+    </code></pre>
+    <div class="fragment card card-orange" style="font-size: 0.7em; margin-top: 0.8em; text-align: center;">
+        <p style="margin: 0;">Feast is in the registry. One command. Connected. No docs. No token.</p>
+    </div>
+
+    <aside class="notes">
+        TIMING: 13:00 — resolving 14:00 live.
+
+        "Remember 14:00? Pull data from the feature store — should be quick.
+        Watch."
+
+        Run: pipeline source add feast --force
+        Run: pipeline source test feast
+
+        Point at "Auth: none — local Feast needs no token."
+        "One command. One config file. Connection confirmed. What took all afternoon
+        just took 10 seconds. And we haven't written a single connector class."
     </aside>
 </section>
 
 <section>
     <h2>Demo: Add MLflow (preset + LLM)</h2>
     <pre><code class="language-bash" data-trim>
-$ pipeline source add mlflow
+$ pipeline source add mlflow \
+    --base-url http://127.0.0.1:5001 --auth-type none --force
+
+  ✓ Registry: preset found for 'mlflow'
+  → LLM: enriching with deeper knowledge...
 
 Source 'MLflow' added  (from: preset+llm)
-  Base URL:         http://localhost:5000
-  Auth:             api_key
+  Base URL:         http://127.0.0.1:5001
+  Auth:             none   ← local server, no auth needed
   Pagination:       offset
   Default endpoint: /api/2.0/mlflow/runs/search
-  Docs: https://mlflow.org/docs/latest/rest-api.html
 
-Next step: pipeline auth set mlflow
-    </code></pre>
-    <p class="fragment muted">Preset gives base config. LLM enriches with deeper knowledge.</p>
-
-    <aside class="notes">
-        TIMING: 13:00. This is the first "wow" moment.
-
-        Point to each line slowly:
-        - "One command. Name the tool."
-        - "Base URL: preset knew this."
-        - "Endpoint: preset+LLM found this together."
-        - "Docs link: so you can go deeper if needed."
-
-        Then say: "The only thing on disk is this one config file. No YAML sprawl.
-        No connector SDK. No custom parser class."
-
-        Open the file in terminal: cat ~/.zero-pipeline/.../config.json
-        Show it to the audience. "That's it. That's the entire config."
-    </aside>
-</section>
-
-<section>
-    <h2>Demo: Any unknown API</h2>
-    <pre><code class="language-bash" data-trim>
-$ pipeline source add my-feature-store \
-    --base-url https://features.internal.mycompany.com
-
-Source 'My-Feature-Store' added  (from: llm_discovered)
-  Base URL:   https://features.internal.mycompany.com
-  Auth:       bearer
-  Pagination: cursor
-  Endpoints:  /v1/features, /v1/entities, /v1/feature-sets
-    </code></pre>
-    <div class="fragment card card-orange" style="font-size: 0.7em; margin-top: 0.8em; text-align: center;">
-        <p style="margin: 0;">Your internal feature store. LLM discovered the API shape from the URL pattern.</p>
-    </div>
-
-    <aside class="notes">
-        TIMING: 14:00. Second "wow" moment — the unknown API.
-
-        Say: "Now watch this. I'm going to add something that has NEVER
-        been registered anywhere. No preset. No training data specific to this URL."
-
-        Run in terminal: pipeline source add my-feature-store --base-url https://features.internal.co
-        Show the output — LLM discovers endpoints from URL pattern.
-
-        "It found /v1/features, /v1/entities. From the URL alone."
-        "For a real internal API, you'd point it at your actual base URL
-        and it discovers the structure."
-    </aside>
-</section>
-
-<section>
-    <h2>Demo: Authenticate</h2>
-    <pre><code class="language-bash" data-trim>
-$ pipeline auth set mlflow
-Enter API token for mlflow: ****
-Token stored securely for mlflow
+No credentials needed — this source runs without authentication.
 
 $ pipeline source test mlflow
 Connection to mlflow successful!
     </code></pre>
-    <p class="muted" style="margin-top: 0.5em;">Token → macOS Keychain. Never touches disk as plaintext.</p>
+    <p class="fragment muted">Known provider: preset + LLM enrichment. Local server on 5001 — no auth.</p>
 
     <aside class="notes">
-        TIMING: 14:30.
+        TIMING: 13:45 — exact command matters here.
 
-        Run in terminal: pipeline auth set mlflow
-        Type the token — it's hidden with ****
+        Run: pipeline source add mlflow --base-url http://127.0.0.1:5001 --auth-type none --force
         Run: pipeline source test mlflow
 
-        If you're on macOS and have a moment: open Keychain Access, search for
-        "zero-pipeline", show the entry. The token is there. Not in any file.
+        "MLflow is a known preset — the LLM enriches it. Local server on 5001,
+        --auth-type none because there's no token on a local server."
 
-        Say: "If your laptop is stolen, the attacker doesn't get your MLflow token
-        from a .env file. They'd need to unlock the keychain first."
+        Point at "Pagination: offset" in the output.
+        "This is the pagination layer from the architecture. MLflow uses offset —
+        page 1, page 2. The connector inferred it. Watch the sync."
     </aside>
 </section>
 
 <section>
-    <h2>Demo: First sync</h2>
+    <h2>Demo: Auth status — no tokens needed</h2>
+    <pre><code class="language-bash" data-trim>
+$ pipeline auth status
+
+┏━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
+┃ Provider   ┃ Auth type ┃ Status            ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
+│ feast      │ none      │ no auth required  │
+│ mlflow     │ none      │ no auth required  │
+│ prometheus │ none      │ no auth required  │
+│ linear     │ api_key   │ authenticated     │
+└────────────┴───────────┴───────────────────┘
+    </code></pre>
+    <p class="gray" style="margin-top: 0.5em;">Local services need no tokens. Linear token → OS keychain.</p>
+
+    <aside class="notes">
+        TIMING: 14:15 — auth overview before the sync.
+
+        Run: pipeline auth status
+
+        "Three local services — no auth required. Linear is the only token,
+        and it's in the keychain. No .env file. No config.yaml.
+        This is the Layer 2 answer to the 14:45 OAuth problem — for local infra,
+        there's nothing to manage."
+    </aside>
+</section>
+
+<section>
+    <h2>Demo: First sync — 13 runs, 3 pages</h2>
     <pre><code class="language-bash" data-trim>
 $ pipeline sync run mlflow
 
-Syncing mlflow /api/2.0/mlflow/runs/search...
-  1. run_abc123: experiment=training-v2, status=FINISHED
-  2. run_def456: experiment=training-v2, status=RUNNING
-  3. run_ghi789: experiment=baseline, status=FINISHED
+  endpoint:   /api/2.0/mlflow/runs/search
+  pagination: cursor (MLflow page_token, 5 per page)
+  checkpoint: saves cursor every 100 records
+
+Syncing mlflow/api/2.0/mlflow/runs/search...
+  1. fraud_rf_20260713_1353
+  2. fraud_rf_20260713_1348
+  3. fraud_rf_20260713_1346
   ...
-Done: 8,421 records extracted
-Output: ~/.zero-pipeline/output/mlflow/runs.jsonl
+
+Done: 13 records extracted
+  output:     ~/.zero-pipeline/output/mlflow/search.jsonl
+  checkpoint: saved — next run resumes from cursor, not from zero
     </code></pre>
 
     <aside class="notes">
-        TIMING: 15:00. The main demo payoff.
+        TIMING: 15:00 — resolving 16:15: no more writing paginators.
 
         Run: pipeline sync run mlflow
-        Watch the records scroll. Let the audience read the run IDs.
 
-        After it completes: cat ~/.zero-pipeline/output/mlflow/runs.jsonl | head -1 | python -m json.tool
-        Show the full JSON of one experiment run.
+        Watch 13 runs come in across 3 pages of 5.
+        "MLflow returns a page_token. The connector follows it automatically.
+        This is what you wrote by hand at 16:15. Never again."
 
-        Point out: "Raw data. Every field from MLflow. You can feed this straight
-        to a training script, a dashboard, or a data warehouse."
-
-        Then: "The cursor is saved. Watch what happens when I run it again..."
+        "Done: 13 records. Cursor saved to disk."
+        Pause. "Watch what happens when I run the exact same command again."
     </aside>
 </section>
 
@@ -903,84 +967,124 @@ Output: ~/.zero-pipeline/output/mlflow/runs.jsonl
     <pre><code class="language-bash" data-trim>
 $ pipeline sync run mlflow
 
-Resuming from checkpoint cursor: 8421
-Done: 12 records extracted   ← only new runs since last sync
+Resuming from checkpoint cursor: eyJvZmZzZXQiOiAxMH0=
+Done: 3 records extracted   ← only runs since last page
 
 $ pipeline sync status
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
-┃ Source                             ┃ Cursor ┃ Last Sync           ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
-│ mlflow:/api/2.0/mlflow/runs/search │ 8421   │ 2026-07-06 14:30:00 │
-└────────────────────────────────────┴────────┴─────────────────────┘
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━┓
+┃ Source                          ┃ Cursor               ┃ Last Sync           ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━┩
+│ mlflow__api_2.0_mlflow_runs_se… │ eyJvZmZzZXQiOiAxMH0= │ 2026-07-13 17:04:20 │
+└─────────────────────────────────┴──────────────────────┴─────────────────────┘
     </code></pre>
-    <p class="fragment green">12 new runs. Not 8,421.</p>
+    <p class="fragment green">3 new runs. Not 13. Cursor picked up exactly where it left off.</p>
 
     <aside class="notes">
-        TIMING: 15:45. The incremental sync punchline.
+        TIMING: 15:45 — resolving 17:00: cursor state never lost again.
 
-        Run: pipeline sync run mlflow  (second time)
-        Point at "Resuming from checkpoint cursor: 8421"
-        Point at "12 records" — not 8,421.
+        Run: pipeline sync run mlflow  (second time — exact same command)
 
-        "Your nightly training job runs at 2am. MLflow has 12 new experiments.
-        The pipeline fetches 12 records, not 8,421. Your training starts faster."
+        Point at "Resuming from checkpoint cursor: eyJvZmZzZXQiOiAxMH0="
+        "That base64 is MLflow's page_token — the exact position saved to disk."
 
-        Show pipeline sync status — the table with cursor and last sync time.
-        "This is the checkpoint state. Crash this process mid-run at record 6,000.
-        Restart it — it picks up at 6,001."
+        Point at "Done: 3 records" — NOT 13.
+        "Your 2am retraining job: 3 new runs since last night. Fetches 3. Not 13.
+        Remember 17:00? Cursor lost, full re-fetch, training delayed.
+        This is the fix. Crash mid-sync — restart picks up at the last cursor. Not from zero."
+
+        Run: pipeline sync status — show the table. Then move to the full pipeline.
     </aside>
 </section>
 
 <section>
-    <h2>Demo: Natural language</h2>
+    <h2>Demo: Interactive assistant</h2>
     <pre><code class="language-bash" data-trim>
-$ pipeline chat "add wandb as a source"
-Adding source: wandb
-Source 'Weights & Biases' added.
+$ pipeline chat
 
-$ pipeline chat "sync my mlflow experiment runs"
-Syncing from mlflow...
-Done: 12 new runs extracted.
+You: what sources are failing?
+Prometheus (localhost:9090) is failing — server not running.
+Want me to start it locally?
 
-$ pipeline chat "show me all my data sources"
+You: yes start it
+  ✓ prometheus is ready at http://127.0.0.1:9090
+Prometheus is now running. Ready to sync.
+
+You: show me all my sources
     </code></pre>
-    <p class="muted">For data scientists who don't live in the terminal.</p>
+    <p class="gray">Full conversational REPL — knows your pipeline state, executes commands.</p>
 
     <aside class="notes">
-        TIMING: 16:30. Bonus feature — the natural language interface.
+        TIMING: 16:30 — the conversational layer on top of everything we've seen.
 
-        Run: pipeline chat "add notion as a source"
-        Run: pipeline chat "sync data from mlflow"
+        Run: pipeline chat
+        Ask: "what sources are failing?" — it sees Prometheus is down.
+        Say: "yes start it" — it starts the local server automatically.
+        Ask: "show me all my sources" — it lists the full table.
 
-        Say: "For the team members who aren't command-line fluent —
-        data scientists, analysts — this is their interface."
+        "This knows your entire pipeline state — sources, cursors, last sync times.
+        Everything we've been running from the CLI, accessible conversationally."
 
-        "It uses the same LLM backend to understand intent and dispatch
-        to the right command. And if no LLM is available, it gives you
-        the exact command to run instead of failing silently."
+        One-shot mode also works: pipeline chat "add grafana --local"
+        Move quickly — the full pipeline is the real payoff.
+    </aside>
+</section>
 
-        Transition: "Okay. Three commands, any API, working live.
-        Now let me show you why you can trust it."
+<section>
+    <h2>Demo: Fraud detection pipeline → Linear</h2>
+    <pre><code class="language-bash" data-trim>
+$ uv run python -m fraud_demo.run_pipeline
+
+  ✓ Feast: 50 feature vectors pulled
+  ✓ Transactions: 15,000 records (5.5% fraud rate)
+  ✓ MLflow: run logged — accuracy=64.7% recall=43.6% roc_auc=0.549
+  ✓ Prometheus: metrics pushed
+  ✓ Linear issue: https://linear.app/olusola-akinsulere/issue/OLU-11/...
+
+Pipeline completed in 4.4s
+No connector classes written. No YAML. No SDK imports per source.
+    </code></pre>
+    <p class="fragment" style="font-size: 0.7em; color: var(--lpurple); margin-top: 0.6em;">
+        The afternoon that took 3 hours. Now one pipeline. Sprint unblocked.
+    </p>
+
+    <aside class="notes">
+        TIMING: 16:45 — the payoff for the entire afternoon.
+
+        Run: uv run python -m fraud_demo.run_pipeline
+
+        "14:00: should be quick. 17:00: pipeline crashed, cursor lost, training delayed.
+        Now: let's see what the same work looks like with all five layers in place."
+
+        Narrate as steps complete:
+          "Feast: 50 feature vectors. Layer 4 pagination — no paginator written."
+          "15,000 fraud transactions loaded."
+          "Model trained — accuracy 64.7%, recall 43.6%."
+          "MLflow run logged — cursor saved, Layer 5 checkpoint active."
+          "Prometheus metrics pushed."
+          "Linear issue created. Sprint unblocked."
+
+        Point at the final line: "Feast features + 15k transactions → train model
+        → MLflow → Prometheus → Linear. 4.4 seconds."
+        Pause. Let it land.
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 5: RELIABILITY (17:00–23:00)
 ════════════════════════════════════════════ -->
-<section class="transition-slide">
-    <div class="muted" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;">17:00 — 23:00</div>
+<section class="transition-slide" aria-label="Section 5: The reliability playbook — patterns that make it trustworthy">
+    <div class="gray" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;" aria-hidden="true">17:00 — 23:00</div>
     <h2>The Reliability Playbook</h2>
-    <p class="muted">The patterns that make it trustworthy</p>
+    <p class="gray">The patterns that make it trustworthy</p>
 
     <aside class="notes">
-        TIMING: 17:00 — Reliability section starts here.
+        TIMING: 17:00 — Section 5. Coming off the 4.4-second pipeline.
 
-        "The demo looked easy. That was intentional."
-        Pause.
-        "But easy to use doesn't mean simple inside.
-        Let me show you the seven patterns that make it trustworthy."
+        "That looked easy. It was meant to. But you just saw five layers of
+        engineering running silently. Let me show you the patterns that make
+        each of those layers trustworthy when things go wrong."
 
-        Build energy here — you're about to give them the real engineering.
+        Build energy — this is the take-home engineering for the audience.
     </aside>
 </section>
 
@@ -1007,17 +1111,16 @@ async def request(self, method, path, **kwargs):
     </code></pre>
 
     <aside class="notes">
-        TIMING: 17:30.
+        TIMING: 17:30 — Pattern 1: the transient failure problem.
 
-        Point to @retry decorator: "Three lines. That's it."
-        Walk the wait_exponential: "1 second, then 2, then 4... capped at 60.
-        Classic exponential backoff."
+        "Every API call in that 4.4-second pipeline was wrapped in this decorator.
+        Three lines. Exponential backoff from 1s to 60s. Three attempts."
 
-        Point at the 429 block: "Rate limited? The API tells us exactly how long to wait.
-        We sleep that exact duration. No guessing."
+        Point at the 429 block: "Rate limited? The API tells us exactly how long.
+        We sleep that duration — not a guess. W&B's cloud API does this.
+        MLflow local doesn't. Same code handles both transparently."
 
-        "MLflow self-hosted might not have rate limits.
-        W&B's cloud API does. This handles both transparently."
+        Quick — move to Pattern 2, which resolves the 17:00 crash directly.
     </aside>
 </section>
 
@@ -1027,12 +1130,12 @@ async def request(self, method, path, **kwargs):
 # After every batch of 100 records, persist the cursor
 if count % 100 == 0 and last_cursor:
     checkpoint_mgr.save(CheckpointState(
-        pipeline_id="sync",
-        source_id="linear:/graphql",
+        pipeline_id="demo-pipeline",
+        source_id="my-feature-store:/v1/features",
         cursor=last_cursor,           # e.g. "eyJjdXJzb3IiOiAiYWJjIn0="
         last_sync_at=datetime.now(),
     ))
-# Crash at record 5,000? Restart picks up at 5,001.
+# Crash at record 5,000? Restart picks up at 5,001. Not from zero.
     </code></pre>
     <div class="fragment two-col" style="font-size: 0.65em; margin-top: 0.8em;">
         <div class="card card-green">
@@ -1046,80 +1149,77 @@ if count % 100 == 0 and last_cursor:
     </div>
 
     <aside class="notes">
-        TIMING: 18:30.
+        TIMING: 18:30 — Pattern 2. The direct fix for 17:00.
 
-        Walk the code: "After every 100 records, we write a cursor to disk.
-        If the process crashes at record 5,000 — restart, reads the cursor, resumes at 5,001."
+        "This is exactly what resolved 17:00. Pipeline fails on retry. Cursor lost.
+        Full re-fetch. Model training delayed. That's the world without this code."
 
-        Show the two cards: "Incremental is the default — the pipeline only fetches what changed.
-        Full refresh is --full — clears the checkpoint and starts over."
+        "After every 100 records, cursor goes to disk. Crash at record 5,000 —
+        restart picks up at 5,001. We saw this in the demo: second sync returned
+        3 records, not 13, because the cursor was already saved."
 
-        "For ML specifically: your nightly training job should never re-ingest
-        all 50k experiment runs. It should ingest last night's 12 new ones."
-
-        "The checkpoint files are plain JSON. You can open them, edit them, delete them.
-        Zero magic. Full control."
+        "Checkpoint files are plain JSON. Cat them. Edit them. Delete them for a full
+        refresh. No magic — full control."
     </aside>
 </section>
 
 <section>
     <h2>Pattern 3: Self-Healing Auth</h2>
     <div class="arch" style="font-size: 0.4em;">AUTH_FORMATS = [
-    (<span class="blue">"Bearer"</span>,  "Authorization"),   # Standard — MLflow managed, W&B cloud
-    (<span class="green">""</span>,        "Authorization"),   # MLflow self-hosted, some internal APIs
-    (<span class="orange">"token"</span>,  "Authorization"),   # Airflow, older REST APIs
-    (<span class="purple">""</span>,        "X-API-Key"),       # Grafana, some observability APIs
-    (<span class="purple">""</span>,        "Api-Key"),         # Prometheus pushgateway, others
+    (<span class="lblue">"Bearer"</span>,  "Authorization"),   # Standard — MLflow managed, W&B cloud
+    (<span class="lblue">""</span>,        "Authorization"),   # MLflow self-hosted, some internal APIs
+    (<span class="lpurple">"token"</span>,  "Authorization"),   # Airflow, older REST APIs
+    (<span class="lpurple">""</span>,        "X-API-Key"),       # Grafana, some observability APIs
+    (<span class="lpurple">""</span>,        "Api-Key"),         # Prometheus pushgateway, others
 ]
 
 for prefix, header in AUTH_FORMATS:
     response = await try_auth(prefix, header)
     if response.ok:
-        self._auth_prefix = prefix  # <span class="green">Saved — no more 401s on this source</span>
+        self._auth_prefix = prefix  # <span class="lblue">Saved — no more 401s on this source</span>
         self._auth_header = header
-        return response             # <span class="green">Log: healing_success event emitted</span></div>
+        return response             # <span class="lblue">Log: healing_success event emitted</span></div>
 
     <aside class="notes">
-        TIMING: 19:30.
+        TIMING: 19:30 — Pattern 3. This is what resolved 15:30.
 
-        Walk through the AUTH_FORMATS list: "Seven formats. In order of most to least common."
+        "Five auth formats, in order of most to least common. The for loop tries each
+        in sequence and stops the moment one returns 200. The winner is saved — all
+        subsequent requests use it. No config change ever needed."
 
-        Point at the for loop: "If Bearer fails, try raw. If raw fails, try X-API-Key.
-        Stop as soon as one works. Save the winner."
+        "Remember 15:30? Token works in curl, 403 in the SDK. This is the code
+        that would have saved those 20 minutes."
 
-        "The healing_success event in the logs is a signal.
-        If it fires repeatedly on a stable pipeline, the upstream API changed its auth.
-        That's worth an alert."
-
-        Quick transition: "Pattern 4 — observability."
+        "The healing_success log is a drift signal — if it fires on a stable pipeline,
+        the upstream API changed its auth contract. Alert on it."
     </aside>
 </section>
 
 <section>
     <h2>Pattern 4: Observability</h2>
     <pre><code class="language-json" data-trim>
-{"event": "pipeline_started",   "run_id": "sync_a1b2c3",   "pipeline": "mlops-data-ingest"}
-{"event": "step_started",       "step": "extract_mlflow",  "source": "mlflow"}
-{"event": "rate_limited",       "url": "/runs/search",     "retry_after": 5.0}
+{"event": "pipeline_started",   "run_id": "sync_a1b2c3",   "pipeline": "demo-pipeline"}
+{"event": "step_started",       "step": "extract_feature_store", "source": "my-feature-store"}
 {"event": "healing_success",    "new_prefix": "",           "new_header": "Authorization"}
-{"event": "step_completed",     "step": "extract_mlflow",
-                                "records": 8421,            "duration_ms": 3200}
-{"event": "pipeline_completed", "total_records": 9103,      "duration_ms": 4850}
+{"event": "step_completed",     "step": "extract_feature_store",
+                                "records": 50284,           "duration_ms": 4100}
+{"event": "step_completed",     "step": "extract_mlflow",  "records": 8421, "duration_ms": 3200}
+{"event": "pipeline_completed", "total_records": 58705,     "duration_ms": 4850}
     </code></pre>
-    <p class="muted">→ Ship to Grafana / Datadog / CloudWatch / your ML observability stack</p>
+    <p class="gray">→ Ship to Grafana / Datadog / CloudWatch / your ML observability stack</p>
 
     <aside class="notes">
-        TIMING: 20:30.
+        TIMING: 20:30 — Pattern 4. The visibility layer.
 
-        Read the log lines slowly — one per line.
-        "Pipeline started. Step started. Rate limit hit — waited.
-        Healing triggered and succeeded. Step completed. Pipeline done."
+        "Every state transition in that 4.4-second pipeline emits one of these JSON lines.
+        pipeline_started, step_started, healing_success — that's the 403 from 15:30,
+        fixed automatically — step_completed with record counts and timing, pipeline_completed."
 
-        "Every state transition. Every timing. Every count.
-        Pipe this to Grafana, Datadog, CloudWatch — whatever you're already using."
+        "Pipe this to Grafana, Datadog, CloudWatch — whatever you're using. The schema
+        is stable: event, run_id, step, records, duration_ms. Build alerts on it."
 
-        "The healing_success line is my favourite. It means:
-        an API changed and the system fixed itself without waking anyone up at 3am."
+        "healing_success is my favourite log line. It means a 403 happened and nobody
+        got woken up."
     </aside>
 </section>
 
@@ -1145,34 +1245,36 @@ for prefix, header in AUTH_FORMATS:
     </table>
 
     <aside class="notes">
-        TIMING: 21:30.
+        TIMING: 21:30 — the full mapping from problems to patterns.
 
-        Read each row slowly: "Network blip → retry. Rate limit → respect Retry-After.
-        Crash → checkpoint resume. Wrong auth → self-healing."
+        Read each row and name the pain point it maps to:
+        "Network blip → retry. That's the 15:30 SDK failure category.
+        Process crash → checkpoint resume. That's 17:00 exactly.
+        Wrong auth → self-healing. That's 15:30 again.
+        10M records → pagination. That's 16:15."
 
-        "None of this is magic. It's seven well-understood patterns
-        applied consistently. You can implement every single one of these
-        independently of this framework."
+        "Seven patterns. None of them magic. All of them implementable in your
+        own Python connectors starting this week — with or without this framework."
 
-        "That's the real takeaway. The framework is the reference implementation.
-        The patterns are what you take home."
+        "The framework is the reference implementation. The patterns are what you
+        take home."
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 6: TAKEAWAYS (23:00–25:00)
 ════════════════════════════════════════════ -->
-<section class="transition-slide">
-    <div class="muted" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;">23:00 — 25:00</div>
+<section class="transition-slide" aria-label="Section 6: Takeaways — your checklist">
+    <div class="gray" style="font-family: monospace; text-align: center; font-size: 0.6em; margin-bottom: 1em;" aria-hidden="true">23:00 — 25:00</div>
     <h2>Takeaways</h2>
-    <p class="muted">Your checklist</p>
+    <p class="gray">Your checklist</p>
 </section>
 
 <section>
     <h2>Building self-configuring connectors</h2>
     <ul class="checklist" style="margin: 0 auto; max-width: 760px;">
         <li>Registry of known patterns (accelerators, not requirements)</li>
-        <li>LLM-driven discovery for unknown APIs — with fallback</li>
+        <li>LLM-driven discovery for unknown APIs — enriches presets, discovers anything</li>
         <li>OS keychain for credentials (never .env, never git)</li>
         <li>Self-healing auth — try multiple formats before failing</li>
         <li>Universal pagination — cursor, offset, link-header, GraphQL</li>
@@ -1182,20 +1284,19 @@ for prefix, header in AUTH_FORMATS:
     </ul>
 
     <aside class="notes">
-        TIMING: 23:00 — Takeaways section.
+        TIMING: 23:00 — Section 6. Every bullet maps back to the afternoon.
 
-        Read the checklist slowly. For each bullet:
-        1. "Registry of patterns — not hardcoded connectors."
-        2. "LLM discovery — but with a fallback. Always have a fallback."
-        3. "OS keychain — not .env files."
-        4. "Self-healing — log the heals so you know when APIs change."
-        5. "Universal pagination — build the abstraction once."
-        6. "Checkpoint after every batch — not at the end."
-        7. "Structured logs — every state transition, not just errors."
-        8. "Incremental by default — full refresh as an escape hatch."
+        1. Registry — replaced 14:45 OAuth doc-reading. Know the patterns once.
+        2. LLM discovery — covers everything the registry doesn't.
+        3. OS keychain — never .env, never git. Layer 2.
+        4. Self-healing auth — log the heals. That's your 15:30 drift alert.
+        5. Universal pagination — built once. Layer 4 removed 16:15 permanently.
+        6. Checkpoint after every batch — not at the end. Layer 5 killed 17:00.
+        7. Structured logs — every state transition, not just errors.
+        8. Incremental by default — full refresh as an escape hatch, not the default.
 
-        Say: "You can implement these eight patterns in your own Python connectors
-        starting this week. You don't need this framework to use these ideas."
+        "You can apply all eight in your own connectors starting this week.
+        The framework is optional. The patterns are not."
     </aside>
 </section>
 
@@ -1207,31 +1308,32 @@ pipeline auth set &lt;anything&gt;       # Credentials go to OS keychain
 pipeline sync run &lt;anything&gt;       # Data flows, checkpointed, healed
     </code></pre>
     <div class="fragment" style="margin-top: 1.5em;">
-        <p style="font-size: 0.8em; color: var(--muted);">Works for:</p>
+        <p style="font-size: 0.8em; color: var(--gray);">Works for:</p>
         <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 0.4em; margin-top: 0.3em;">
-            <span class="tag">MLflow</span>
+            <span class="tag" style="border-color:var(--lblue);color:var(--lblue);">my-feature-store</span>
+            <span class="tag" style="border-color:var(--lpurple);color:var(--lpurple);">MLflow</span>
             <span class="tag">Weights &amp; Biases</span>
-            <span class="tag">Feast</span>
+            <span class="tag">Airflow</span>
             <span class="tag">Prometheus</span>
             <span class="tag">GitHub</span>
-            <span class="tag">Notion</span>
             <span class="tag">Linear</span>
-            <span class="tag">your-feature-store</span>
             <span class="tag">anything-with-an-api</span>
         </div>
     </div>
 
     <aside class="notes">
-        TIMING: 24:00.
+        TIMING: 24:00 — the promise, delivered.
 
-        Point to the tag pills one by one: "MLflow. W&B. Airflow. Prometheus."
-        Then: "GitHub. Notion. Linear. These are just the presets."
-        Then: "Your feature store. Your internal monitoring API. Anything with an HTTP endpoint."
+        "We started with a three-hour afternoon and five painful timestamps.
+        Here's what the same work looks like now."
 
-        Deliver the closing line of Section 6:
+        Point to the tag pills: "MLflow, W&B, Airflow, Prometheus, GitHub, Linear —
+        those are presets. Your feature store, your internal monitoring API,
+        anything with an HTTP endpoint — three commands."
+
         "Three commands. Any API. Zero config files."
 
-        Then transition: "When do you need more than this?"
+        Pause. Then: "But I owe you one honest answer — when is this not enough?"
     </aside>
 </section>
 
@@ -1239,7 +1341,7 @@ pipeline sync run &lt;anything&gt;       # Data flows, checkpointed, healed
     <h2>When to graduate beyond this</h2>
     <div class="two-col" style="font-size: 0.65em;">
         <div class="card card-green">
-            <h3 class="green" style="font-size: 0.9em;">This is enough when</h3>
+            <h3 class="lblue" style="font-size: 0.9em;">This is enough when</h3>
             <ul style="list-style: none; padding: 0; margin: 0;">
                 <li style="margin: 0.4em 0;">✓ Single-machine ETL</li>
                 <li style="margin: 0.4em 0;">✓ Prototyping pipelines fast</li>
@@ -1248,7 +1350,7 @@ pipeline sync run &lt;anything&gt;       # Data flows, checkpointed, healed
             </ul>
         </div>
         <div class="card card-orange">
-            <h3 class="orange" style="font-size: 0.9em;">Use Temporal / Dagster when</h3>
+            <h3 class="lpurple" style="font-size: 0.9em;">Use Temporal / Dagster when</h3>
             <ul style="list-style: none; padding: 0; margin: 0;">
                 <li style="margin: 0.4em 0;">→ Distributed execution needed</li>
                 <li style="margin: 0.4em 0;">→ Workflows span hours or days</li>
@@ -1259,38 +1361,41 @@ pipeline sync run &lt;anything&gt;       # Data flows, checkpointed, healed
     </div>
 
     <aside class="notes">
-        TIMING: 24:30.
+        TIMING: 24:30 — honest boundaries. This is Section 2's "it does NOT mean" applied.
 
-        Read the green column: "Single-machine ETL, prototyping, internal tools, &lt;1M records.
-        For most MLOps pipelines — this is enough."
+        "Green column: single-machine ETL, prototyping, internal MLOps tooling, under 1M
+        records per run. The fraud pipeline you just saw fits here perfectly."
 
-        Read the orange column: "Distributed execution, hours-long workflows, multi-team — reach for Temporal, Dagster, Prefect."
+        "Orange column: distributed execution, workflows that span hours, multi-team
+        orchestration — reach for Temporal, Dagster, Prefect. No shame in that."
 
-        Key line: "Don't reach for Temporal for a 10-source internal pipeline.
-        That's like using a cargo ship to cross a stream."
+        "Don't reach for Temporal for a 10-source internal pipeline.
+        That's a cargo ship to cross a stream."
 
-        "The rule: start here. Graduate when the problem grows past it."
+        "The rule: start here. Graduate when the problem genuinely outgrows it."
     </aside>
 </section>
 
 <!-- ══════════════════════════════════════════
      SECTION 7: Q&A (25:00–30:00)
 ════════════════════════════════════════════ -->
-<section data-background-gradient="radial-gradient(circle at 70% 50%, #0a2540 0%, #0d1117 60%)">
+<section aria-label="Questions and answers — try it now" data-background-gradient="radial-gradient(circle at 70% 50%, #0a2540 0%, #0d1117 60%)">
     <h1 style="font-size: 3em;">Questions?</h1>
     <div style="margin-top: 2em; font-size: 0.7em; text-align: left; max-width: 600px; margin: 2em auto 0;">
         <div class="two-col">
             <div>
-                <p class="muted" style="font-size: 0.85em; margin-bottom: 0.3em;">Try it now</p>
+                <p class="gray" style="font-size: 0.85em; margin-bottom: 0.3em;">Try it now</p>
                 <pre style="font-size: 0.75em; margin: 0;"><code class="language-bash">git clone https://github.com/Lanrey/zero-to-pipeline
-uv sync --project python
-pipeline source add mlflow
-pipeline auth set mlflow
-pipeline sync run mlflow</code></pre>
+cd zero-to-pipeline/python && uv sync
+pipeline source add my-feature-store \
+    --base-url https://your-api.internal
+pipeline auth set my-feature-store
+pipeline auth set linear
+uv run python -m examples.demo_pipeline</code></pre>
             </div>
             <div style="font-size: 0.85em;">
-                <p class="muted" style="margin-bottom: 0.3em;">Tech stack</p>
-                <ul style="list-style: none; padding: 0; margin: 0; color: var(--text);">
+                <p class="gray" style="margin-bottom: 0.3em;">Tech stack</p>
+                <ul style="list-style: none; padding: 0; margin: 0; color: var(--lavender);">
                     <li style="margin: 0.3em 0;"><span class="tag">httpx</span> async HTTP</li>
                     <li style="margin: 0.3em 0;"><span class="tag">pydantic</span> typed models</li>
                     <li style="margin: 0.3em 0;"><span class="tag">tenacity</span> retries</li>
@@ -1302,32 +1407,34 @@ pipeline sync run mlflow</code></pre>
     </div>
 
     <aside class="notes">
-        TIMING: 25:00 — Q&A starts. You have 5 minutes.
+        TIMING: 25:00 — Q&A. You have 5 minutes.
 
-        Say: "The repo is in the talk description. Everything I showed you is in there —
-        including the examples directory with the MLOps pipeline demo."
+        "Clone the repo and run `uv sync` — everything from the demo is in there.
+        `uv run python -m fraud_demo.run_pipeline` is the exact command you saw."
 
-        Likely questions to prepare for:
-        Q: "Does this work with MCP servers?" → Yes, the architecture includes an MCP server.
-           The framework exposes pipeline operations as MCP tools for AI assistants.
-        Q: "What about DLT or Airbyte?" → Great tools. This is lighter-weight and more Python-native.
-           Use DLT for 300+ connectors with managed state. Use this when you need full control.
-        Q: "Can I use this in production?" → Yes, with the caveats in the talk.
-           Not for distributed pipelines. Single-machine, &lt;1M records per run, great fit.
-        Q: "Which LLM provider do you recommend?" → Bedrock for enterprise/production,
-           OpenAI for development, Ollama for air-gapped environments.
-        Q: "Does it work offline?" → Yes, LLM is optional. System works on name-based inference alone.
+        Likely questions:
 
-        Close with: "Scan the QR codes on the first slide if you want to connect.
-        I'm around for the rest of the conference. Thank you."
-        or how to adapt this for your specific use case.
+        Q: "What about DLT or Airbyte?"
+           → Great tools. DLT: 300+ managed connectors, heavier state. This: full control,
+           Python-native, lighter. Use DLT when you want managed connectors at scale.
+
+        Q: "Can I use this in production?"
+           → Yes, with the caveats from slide 11. Single-machine, under 1M records. Not distributed.
+
+        Q: "Which LLM provider?"
+           → Pre-configured for this demo. You configure it in your own deployment.
+
+        Q: "Does it work offline?"
+           → Registry returns config instantly for known providers. LLM enrichment needs network.
+
+        Close: "Scan the QR on the first slide. I'm around all conference. Thank you."
     </aside>
 </section>
 
-<section>
+<section aria-label="Thank you — closing slide">
     <h2>Thank you</h2>
-    <p style="font-size: 0.9em; color: var(--text);">Olusola Akinsulere</p>
-    <p class="muted" style="font-size: 0.7em; margin-top: 0.5em;">EuroPython 2026 · Kraków, Poland</p>
+    <p style="font-size: 0.9em; color: var(--lavender);">Olusola Akinsulere</p>
+    <p class="gray" style="font-size: 0.7em; margin-top: 0.5em;">EuroPython 2026 · Kraków, Poland</p>
     <br>
     <blockquote style="font-size: 0.75em; max-width: 580px; margin: 0 auto;">
         "The best pipeline is the one your team actually uses —<br>
@@ -1354,6 +1461,77 @@ pipeline sync run mlflow</code></pre>
         // Keyboard shortcuts shown at bottom
         help: true,
     });
+</script>
+
+<!-- ── Fallback demo video modal ──────────────────────────────────────────── -->
+<!-- Replace LOOM_URL below with your actual Loom recording URL before the talk -->
+<div id="fallback-modal"
+     style="display:none; position:fixed; inset:0; z-index:9999;
+            background:rgba(0,0,0,0.92); align-items:center; justify-content:center;
+            flex-direction:column; gap:1.2em;"
+     onclick="if(event.target===this) this.style.display='none'">
+
+    <p style="font-family:'Open Sans',sans-serif; color:#aae5fa; font-size:1em;
+              margin:0; letter-spacing:0.05em;">BACKUP DEMO</p>
+
+    <!-- Loom embed — swap in your URL -->
+    <div style="position:relative; width:min(860px,90vw); aspect-ratio:16/9;
+                border-radius:8px; overflow:hidden; background:#000;">
+        <iframe id="loom-iframe"
+                src="about:blank"
+                data-loom-src="https://www.loom.com/embed/8f29b2c846d74686977947a0e27ee1c1"
+                frameborder="0"
+                allowfullscreen
+                style="position:absolute; inset:0; width:100%; height:100%;">
+        </iframe>
+        <div id="loom-placeholder"
+             style="position:absolute; inset:0; display:flex; align-items:center;
+                    justify-content:center; background:var(--bg-dark);">
+            <p style="color:var(--gray); font-family:'Consolas',monospace; font-size:0.8em; margin:0;">
+                Loading…
+            </p>
+        </div>
+    </div>
+
+    <button onclick="closeFallbackVideo()"
+            style="background:transparent; border:1px solid var(--gray); color:var(--gray);
+                   font-family:'Consolas',monospace; font-size:0.65em; padding:0.4em 1.2em;
+                   border-radius:4px; cursor:pointer; margin-top:0.4em;">
+        ✕ close  (or click outside)
+    </button>
+</div>
+
+<script>
+function openFallbackVideo() {
+    var modal = document.getElementById('fallback-modal');
+    var iframe = document.getElementById('loom-iframe');
+    var placeholder = document.getElementById('loom-placeholder');
+    var src = iframe.getAttribute('data-loom-src');
+    // Load the video immediately when opening
+    if (src) {
+        iframe.src = src;
+        if (placeholder) placeholder.style.display = 'none';
+    }
+    modal.style.display = 'flex';
+}
+
+function closeFallbackVideo() {
+    var modal = document.getElementById('fallback-modal');
+    var iframe = document.getElementById('loom-iframe');
+    // Stop video playback by resetting src
+    iframe.src = 'about:blank';
+    modal.style.display = 'none';
+    // Restore placeholder for next open
+    var placeholder = document.getElementById('loom-placeholder');
+    if (placeholder) placeholder.style.display = 'flex';
+    // Reload src attribute so next open works
+    iframe.setAttribute('data-loom-src', 'https://www.loom.com/embed/8f29b2c846d74686977947a0e27ee1c1');
+}
+
+// Click outside modal to close
+document.getElementById('fallback-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeFallbackVideo();
+});
 </script>
 
 <!-- QR code — qrcodejs2 renders directly into a div, no canvas API quirks -->

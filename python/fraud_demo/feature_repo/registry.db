@@ -1,0 +1,59 @@
+
+w
+W
+user_id2A user that has executed or received a transaction"user_idJfraud_detection
+Å¼ÓÒĞ÷ß³Å¼ÓÒĞ÷ß³
+F
+&
+__dummy"
+__dummy_idJfraud_detection
+Å¼ÓÒ€Çê³Å¼ÓÒ€Çê³1"$fa9f7ccc-bec1-4ba7-9279-914f6f22c4be*×¼ÓÒ å«Y2»
+‚
+user_account_featuresfraud_detectionuser_id"
+credit_score"
+account_age_days"
+user_has_2fa_installed"
+avg_transaction_amount*
+domainuser_profile*
+teamfraud2€Äÿ:¨event_timestampZŸœ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢œ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquet’Å¼ÓÒ¸¬ş¤"Å¼ÓÒ¸ñº³@b
+user_id’latest4
+Å¼ÓÒ¨ï³×¼ÓÒà—ÎO
+×øÓÃˆù”Ô¼ÓÒ02÷
+¾
+user_transaction_countsfraud_detectionuser_id"
+transaction_count_7d*
+domain	behaviour*
+teamfraud2€õ$:¬event_timestampZ¡/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquet’Å¼ÓÒ¨Ò¥"Å¼ÓÒÈŒÌ³@b
+user_id’latest4
+Å¼ÓÒÇ„´×¼ÓÒ€Ş£Y
+×Ç®ÒàÉçOÔ¼ÓÒ0Rê
+ñ
+,feast.infra.online_stores.sqlite.SqliteTable"À
+–/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/feature_repo/online_store.db%fraud_detection_user_account_features
+ó
+,feast.infra.online_stores.sqlite.SqliteTable"Â
+–/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/feature_repo/online_store.db'fraud_detection_user_transaction_countsbºevent_timestampZŸœ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢œ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquetªfraud_detection’Å¼ÓÒ¸¬ş¤"Å¼ÓÒ¸ñº³b¾event_timestampZ¡/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquetªfraud_detection’Å¼ÓÒ¨Ò¥"Å¼ÓÒÈŒÌ³Š1
+
+fraud_detection
+Å¼ÓÒ˜¹™¥Å¼ÓÒ˜¹™¥’ä
+
+user_account_featuresfraud_detection"feature_view*£
+‚
+user_account_featuresfraud_detectionuser_id"
+credit_score"
+account_age_days"
+user_has_2fa_installed"
+avg_transaction_amount*
+teamfraud*
+domainuser_profile2€Äÿ:¨event_timestampZŸœ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢œ/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_account_features.parquet’Å¼ÓÒ¸¬ş¤"Å¼ÓÒ¸ñº³@b
+user_id’latest
+Å¼ÓÒ¨ï³Å¼ÓÒ¨ï³2Å¼ÓÒ¨Å‚´B$47b103b4-9319-4523-b5dd-90f0d9c64d0f
+Î
+user_transaction_countsfraud_detection"feature_view*ß
+¾
+user_transaction_countsfraud_detectionuser_id"
+transaction_count_7d*
+teamfraud*
+domain	behaviour2€õ$:¬event_timestampZ¡/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢/Users/olusolaakinsulere/Documents/loganworld/personal/personalprojects/dataingestionpydatahelenskidemo/python/fraud_demo/data/user_transaction_counts.parquet’Å¼ÓÒ¨Ò¥"Å¼ÓÒÈŒÌ³@b
+user_id’latest
+Å¼ÓÒÇ„´Å¼ÓÒÇ„´2Å¼ÓÒ¨”´B$3b878fe2-e37c-48ad-a5ea-28b768caf0cb

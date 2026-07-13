@@ -3,7 +3,7 @@
 DEMO ACCELERATORS — NOT REQUIREMENTS
 ======================================
 Provider presets exist to make the live demo fast. The system is designed
-to work with ANY API or MCP server — unknown providers are discovered
+to work with ANY API — unknown providers are discovered
 dynamically via LLM-driven probing or inferred from the provider name.
 Presets are NOT required for the system to function.
 
@@ -145,18 +145,18 @@ provider_registry = ProviderRegistry()
 
 provider_registry.register("mlflow", ProviderPreset(
     name="MLflow",
-    base_url="http://localhost:5000",  # self-hosted; override with --base-url
-    auth_type=AuthType.API_KEY,
+    base_url="http://127.0.0.1:5001",  # local demo server (no auth) — port 5000 is macOS AirPlay
+    auth_type=AuthType.NONE,
     auth_header="Authorization",
-    auth_prefix="Bearer",
+    auth_prefix="",
     pagination_style="offset",
     api_style="rest",
     default_endpoints={
         "runs": "/api/2.0/mlflow/runs/search",
-        "experiments": "/api/2.0/mlflow/experiments/list",
-        "models": "/api/2.0/mlflow/registered-models/list",
+        "experiments": "/api/2.0/mlflow/experiments/search",
+        "models": "/api/2.0/mlflow/registered-models/search",
     },
-    health_endpoint="/api/2.0/mlflow/experiments/list",
+    health_endpoint="/",
     docs_url="https://mlflow.org/docs/latest/rest-api.html",
     tagline="Open-source ML lifecycle management",
 ))
@@ -178,6 +178,24 @@ provider_registry.register("wandb", ProviderPreset(
     health_endpoint="/graphql",
     docs_url="https://docs.wandb.ai/ref/public-api/api",
     tagline="ML experiment tracking and model registry",
+))
+
+# ── Feature Stores ────────────────────────────────────────────────────────────
+
+provider_registry.register("feast", ProviderPreset(
+    name="Feast",
+    base_url="http://127.0.0.1:6566",  # local feature server; override with --base-url
+    auth_type=AuthType.NONE,
+    auth_header="Authorization",
+    auth_prefix="",
+    pagination_style="offset",
+    api_style="rest",
+    default_endpoints={
+        "features": "/get-online-features",
+    },
+    health_endpoint="/docs",
+    docs_url="https://docs.feast.dev",
+    tagline="Open-source feature store for ML",
 ))
 
 # ── Data Observability & Monitoring ───────────────────────────────────────────

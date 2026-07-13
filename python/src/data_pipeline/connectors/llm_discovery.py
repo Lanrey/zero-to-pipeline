@@ -1,27 +1,10 @@
-"""LLM-driven API discovery with pluggable providers.
-
-Supports multiple LLM backends:
-- copilot: GitHub Copilot CLI (legacy, default if available)
-- openai: OpenAI API (GPT-4o, etc.)
-- anthropic: Anthropic API (Claude)
-- ollama: Local Ollama models
-
-The provider is selected via:
-1. PIPELINE_LLM_PROVIDER env var
-2. pipeline config (settings)
-3. Auto-detection (tries copilot → openai → anthropic → ollama)
-
-When no LLM is available, all functions gracefully fall back to None
-and the system uses registry + inference patterns.
-"""
-
 from __future__ import annotations
 
+import configparser
 import json
 import os
-import subprocess
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import structlog
@@ -29,6 +12,29 @@ import structlog
 from data_pipeline.config import settings
 
 logger = structlog.get_logger(__name__)
+
+_AWS_PROFILE_DEFAULT = "Lanrey"
+_AWS_REGION_DEFAULT = "us-east-1"  # Lanrey account's Bedrock region
+_MODEL_DEFAULT = "us.anthropic.claude-sonnet-4-6"
+
+
+def _load_aws_profile_credentials(profile: str) -> tuple[str, str, str | None]:
+    """Load AWS credentials from ~/.aws/credentials for a named profile.
+
+    Returns (access_key_id, secret_access_key, session_token).
+    """
+    creds_path = os.path.expanduser("~/.aws/credentials")
+    config = configparser.ConfigParser()
+    config.read(creds_path)
+    if profile not in config:
+        raise RuntimeError(f"AWS profile '{profile}' not found in {creds_path}")
+    section = config[profile]
+    access_key = section.get("aws_access_key_id", "")
+    secret_key = section.get("aws_secret_access_key", "")
+    session_token = section.get("aws_session_token") or None
+    if not access_key or not secret_key:
+        raise RuntimeError(f"AWS profile '{profile}' is missing access key or secret key")
+    return access_key, secret_key, session_token
 
 
 @dataclass(slots=True)
@@ -54,166 +60,19 @@ class LLMProvider(ABC):
     @abstractmethod
     def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult: ...
 
-
-class CopilotProvider(LLMProvider):
-    """GitHub Copilot CLI provider (legacy)."""
-
-    _available: bool | None = None
-
-    @property
-    def name(self) -> str:
-        return "copilot"
-
-    def is_available(self) -> bool:
-        if CopilotProvider._available is not None:
-            return CopilotProvider._available
-        try:
-            result = subprocess.run(
-                ["copilot", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            CopilotProvider._available = result.returncode == 0
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            CopilotProvider._available = False
-        return CopilotProvider._available
-
-    def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult:
-        model = os.environ.get("PIPELINE_LLM_MODEL", "gpt-5.3-codex")
-        command = [
-            "copilot", "-p", prompt,
-            "--model", model,
-            "--allow-all-tools",
-            "--stream", "off",
-            "--silent", "--no-color",
-        ]
-        try:
-            result = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=timeout,
-                env=os.environ.copy(),
-            )
-            stdout_text = (result.stdout or "").strip()
-            if result.returncode != 0:
-                stderr_text = (result.stderr or "").strip()
-                return LLMResult(text=stdout_text, success=False, error=stderr_text or f"exit code {result.returncode}")
-            return LLMResult(text=stdout_text, parsed=_try_parse_json(stdout_text), success=True)
-        except FileNotFoundError:
-            return LLMResult(text="", success=False, error="copilot CLI not found")
-        except subprocess.TimeoutExpired:
-            return LLMResult(text="", success=False, error=f"timed out after {timeout}s")
-        except Exception as e:
-            return LLMResult(text="", success=False, error=str(e))
-
-
-class OpenAIProvider(LLMProvider):
-    """OpenAI API provider."""
-
-    @property
-    def name(self) -> str:
-        return "openai"
-
-    def is_available(self) -> bool:
-        return bool(os.environ.get("OPENAI_API_KEY"))
-
-    def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult:
-        try:
-            import httpx
-        except ImportError:
-            return LLMResult(text="", success=False, error="httpx not installed")
-
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        model = os.environ.get("PIPELINE_LLM_MODEL", "gpt-4o")
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-
-        try:
-            response = httpx.post(
-                f"{base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": model,
-                    "messages": [
-                        {"role": "system", "content": "You are an API integration expert. Respond with only JSON, no markdown."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0,
-                    "response_format": {"type": "json_object"},
-                },
-                timeout=timeout,
-            )
-            response.raise_for_status()
-            data = response.json()
-            text = data["choices"][0]["message"]["content"].strip()
-            return LLMResult(text=text, parsed=_try_parse_json(text), success=True)
-        except Exception as e:
-            return LLMResult(text="", success=False, error=str(e))
-
-
-class AnthropicProvider(LLMProvider):
-    """Anthropic direct API provider."""
-
-    @property
-    def name(self) -> str:
-        return "anthropic"
-
-    def is_available(self) -> bool:
-        return bool(os.environ.get("ANTHROPIC_API_KEY"))
-
-    def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult:
-        try:
-            import httpx
-        except ImportError:
-            return LLMResult(text="", success=False, error="httpx not installed")
-
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        model = os.environ.get("PIPELINE_LLM_MODEL", "claude-sonnet-4-20250514")
-
-        try:
-            response = httpx.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": model,
-                    "max_tokens": 1024,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "system": "You are an API integration expert. Respond with only valid JSON. No markdown fences, no explanation text, just the JSON object.",
-                },
-                timeout=timeout,
-            )
-            response.raise_for_status()
-            data = response.json()
-            # Anthropic Messages API returns: {"content": [{"type": "text", "text": "..."}]}
-            content_blocks = data.get("content", [])
-            text_parts = []
-            for block in content_blocks:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    text_parts.append(block.get("text", ""))
-            text = "\n".join(text_parts).strip()
-            return LLMResult(text=text, parsed=_try_parse_json(text), success=True)
-        except httpx.HTTPStatusError as e:
-            error_body = e.response.text[:500] if e.response else str(e)
-            return LLMResult(text="", success=False, error=f"Anthropic HTTP {e.response.status_code}: {error_body}")
-        except Exception as e:
-            return LLMResult(text="", success=False, error=str(e))
+    def chat(self, messages: list[dict], *, system: str, max_tokens: int = 2048, timeout: int = 60) -> LLMResult:
+        """Multi-turn chat using full message history. Default impl wraps complete()."""
+        last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+        return self.complete(last, timeout=timeout)
 
 
 class BedrockProvider(LLMProvider):
-    """AWS Bedrock provider for Anthropic Claude models.
+    """AWS Bedrock provider — Claude via the Lanrey AWS profile.
 
-    Requires AWS credentials configured via:
-    - AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY (+ optional AWS_SESSION_TOKEN)
-    - Or AWS_PROFILE with credentials in ~/.aws/credentials
-    - AWS_REGION (defaults to us-east-1)
-
-    Set PIPELINE_LLM_PROVIDER=bedrock to use.
+    Credential resolution order:
+    1. AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY env vars (explicit)
+    2. AWS_PROFILE env var → ~/.aws/credentials
+    3. Lanrey profile in ~/.aws/credentials (hardcoded default for this demo)
     """
 
     @property
@@ -221,13 +80,28 @@ class BedrockProvider(LLMProvider):
         return "bedrock"
 
     def is_available(self) -> bool:
-        has_keys = bool(
-            os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY")
-        )
-        has_profile = bool(os.environ.get("AWS_PROFILE"))
-        return has_keys or has_profile
+        if os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY"):
+            return True
+        profile = os.environ.get("AWS_PROFILE", _AWS_PROFILE_DEFAULT)
+        try:
+            _load_aws_profile_credentials(profile)
+            return True
+        except RuntimeError:
+            return False
+
+    def chat(self, messages: list[dict], *, system: str, max_tokens: int = 2048, timeout: int = 60) -> LLMResult:
+        """Multi-turn chat with full conversation history."""
+        return self._invoke(messages, system=system, max_tokens=max_tokens, timeout=timeout)
 
     def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult:
+        return self._invoke(
+            [{"role": "user", "content": prompt}],
+            system="You are an API integration expert. Respond with only valid JSON. No markdown fences, no explanation text, just the JSON object.",
+            max_tokens=1024,
+            timeout=timeout,
+        )
+
+    def _invoke(self, messages: list[dict], *, system: str, max_tokens: int = 1024, timeout: int = 30) -> LLMResult:
         try:
             import hashlib
             import hmac
@@ -238,29 +112,34 @@ class BedrockProvider(LLMProvider):
         except ImportError:
             return LLMResult(text="", success=False, error="httpx not installed")
 
-        region = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
-        model = os.environ.get("PIPELINE_LLM_MODEL", "anthropic.claude-sonnet-4-20250514-v1:0")
+        # Always use the Lanrey account's Bedrock region (us-east-1),
+        # ignoring any ambient AWS_REGION in the shell environment.
+        region = os.environ.get("PIPELINE_AWS_REGION", _AWS_REGION_DEFAULT)
+        model = os.environ.get("PIPELINE_LLM_MODEL", _MODEL_DEFAULT)
+
+        # Resolve credentials: explicit env vars → named profile
         access_key = os.environ.get("AWS_ACCESS_KEY_ID", "")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
         session_token = os.environ.get("AWS_SESSION_TOKEN")
 
         if not access_key or not secret_key:
-            return LLMResult(
-                text="", success=False,
-                error="AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY required",
-            )
+            profile = os.environ.get("AWS_PROFILE", _AWS_PROFILE_DEFAULT)
+            try:
+                access_key, secret_key, session_token = _load_aws_profile_credentials(profile)
+            except RuntimeError as e:
+                return LLMResult(text="", success=False, error=str(e))
 
         host = f"bedrock-runtime.{region}.amazonaws.com"
-        # Model IDs contain colons (e.g. "v1:0") — must be URL-encoded in the path
+        # Model IDs may contain colons (e.g. "v1:0") — encode everything
         encoded_model = quote(model, safe="")
         path = f"/model/{encoded_model}/invoke"
         url = f"https://{host}{path}"
 
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 1024,
-            "messages": [{"role": "user", "content": prompt}],
-            "system": "You are an API integration expert. Respond with only valid JSON. No markdown fences, no explanation text, just the JSON object.",
+            "max_tokens": max_tokens,
+            "messages": messages,
+            "system": system,
         })
 
         now = datetime.now(timezone.utc)
@@ -345,102 +224,38 @@ class BedrockProvider(LLMProvider):
             return LLMResult(text="", success=False, error=str(e))
 
 
-class OllamaProvider(LLMProvider):
-    """Local Ollama provider."""
-
-    @property
-    def name(self) -> str:
-        return "ollama"
-
-    def is_available(self) -> bool:
-        try:
-            import httpx
-            response = httpx.get(
-                os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434") + "/api/tags",
-                timeout=3,
-            )
-            return response.status_code == 200
-        except Exception:
-            return False
-
-    def complete(self, prompt: str, *, timeout: int = 60) -> LLMResult:
-        try:
-            import httpx
-        except ImportError:
-            return LLMResult(text="", success=False, error="httpx not installed")
-
-        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-        model = os.environ.get("PIPELINE_LLM_MODEL", "llama3.1")
-
-        try:
-            response = httpx.post(
-                f"{base_url}/api/generate",
-                json={
-                    "model": model,
-                    "prompt": f"You are an API integration expert. Respond with only JSON.\n\n{prompt}",
-                    "stream": False,
-                    "format": "json",
-                },
-                timeout=timeout,
-            )
-            response.raise_for_status()
-            data = response.json()
-            text = data.get("response", "").strip()
-            return LLMResult(text=text, parsed=_try_parse_json(text), success=True)
-        except Exception as e:
-            return LLMResult(text="", success=False, error=str(e))
-
-
 # --- Provider Registry ---
 
 PROVIDERS: dict[str, type[LLMProvider]] = {
-    "copilot": CopilotProvider,
-    "openai": OpenAIProvider,
-    "anthropic": AnthropicProvider,
     "bedrock": BedrockProvider,
-    "ollama": OllamaProvider,
 }
 
 _active_provider: LLMProvider | None = None
 
 
 def get_llm_provider() -> LLMProvider | None:
-    """Get the active LLM provider.
-
-    Selection order:
-    1. PIPELINE_LLM_PROVIDER env var (explicit choice)
-    2. Auto-detect first available: copilot → openai → anthropic → ollama
-    """
+    """Get the active LLM provider (always AWS Bedrock / Claude)."""
     global _active_provider
     if _active_provider is not None:
         return _active_provider
 
-    explicit = os.environ.get("PIPELINE_LLM_PROVIDER", "").lower().strip()
-    if explicit and explicit in PROVIDERS:
-        provider = PROVIDERS[explicit]()
-        if provider.is_available():
-            _active_provider = provider
-            logger.info("llm_provider_selected", provider=explicit, source="env")
-            return _active_provider
-        logger.warning("llm_provider_unavailable", provider=explicit)
+    provider = BedrockProvider()
+    if provider.is_available():
+        _active_provider = provider
+        logger.info("llm_provider_selected", provider="bedrock", model=_MODEL_DEFAULT)
+        return _active_provider
 
-    for name, cls in PROVIDERS.items():
-        provider = cls()
-        if provider.is_available():
-            _active_provider = provider
-            logger.info("llm_provider_selected", provider=name, source="auto")
-            return _active_provider
-
-    logger.info("llm_no_provider_available")
+    logger.warning("llm_bedrock_unavailable", hint="Check AWS credentials for profile 'Lanrey'")
     return None
 
 
 def set_llm_provider(name: str) -> bool:
-    """Explicitly set the LLM provider by name. Returns True if available."""
+    """No-op compatibility shim — only Bedrock is supported."""
     global _active_provider
-    if name.lower() not in PROVIDERS:
+    if name.lower() != "bedrock":
+        logger.warning("llm_provider_unsupported", requested=name, supported="bedrock")
         return False
-    provider = PROVIDERS[name.lower()]()
+    provider = BedrockProvider()
     if not provider.is_available():
         return False
     _active_provider = provider
@@ -448,25 +263,20 @@ def set_llm_provider(name: str) -> bool:
 
 
 def available_providers() -> list[dict[str, Any]]:
-    """List all providers and their availability status."""
-    result = []
-    for name, cls in PROVIDERS.items():
-        p = cls()
-        result.append({"name": name, "available": p.is_available()})
-    return result
+    """Return availability status for the single supported provider."""
+    p = BedrockProvider()
+    return [{"name": "bedrock", "available": p.is_available()}]
 
 
 # --- Utility ---
 
 def _try_parse_json(text: str) -> dict[str, Any] | None:
-    """Parse JSON from LLM output, handling common response quirks.
+    """Parse JSON from Claude's response, handling common output quirks.
 
-    LLMs (especially Claude via Bedrock/Anthropic) may:
+    Claude via Bedrock may occasionally:
     - Wrap JSON in ```json ... ``` markdown fences
-    - Add explanatory text before/after the JSON
-    - Return the JSON cleanly (ideal case)
-
-    This parser handles all these patterns uniformly regardless of provider.
+    - Add a brief explanatory prefix before the JSON object
+    - Return the JSON cleanly (the expected case given the system prompt)
     """
     text = text.strip()
     if not text:

@@ -26,9 +26,13 @@ class AuthManager:
     def authenticate(self, source: SourceConfig) -> dict:
         """Authenticate a source, returning the credential dict.
 
+        For no-auth sources (AuthType.NONE): returns empty dict immediately.
         For OAuth sources: runs device flow if no stored credential exists.
-        For API key sources: retrieves from keyring or raises if missing.
+        For API key / basic sources: retrieves from keyring or raises if missing.
         """
+        if source.api and source.api.auth_type == AuthType.NONE:
+            return {}
+
         existing = self._store.retrieve(source.id)
         if existing:
             if source.oauth and "refresh_token" in existing:
@@ -54,7 +58,13 @@ class AuthManager:
         logger.info("api_key_stored", source=source.slug)
 
     def get_auth_header(self, source: SourceConfig) -> dict[str, str]:
-        """Get the authorization header for API requests."""
+        """Get the authorization header for API requests.
+
+        Returns an empty dict for no-auth sources (AuthType.NONE).
+        """
+        if source.api and source.api.auth_type == AuthType.NONE:
+            return {}
+
         credential = self.authenticate(source)
         token = credential.get("access_token", "")
 
@@ -68,7 +78,12 @@ class AuthManager:
         return {"Authorization": f"Bearer {token}"}
 
     def is_authenticated(self, source: SourceConfig) -> bool:
-        """Check if a source has valid stored credentials."""
+        """Check if a source has valid stored credentials.
+
+        No-auth sources (AuthType.NONE) are always considered authenticated.
+        """
+        if source.api and source.api.auth_type == AuthType.NONE:
+            return True
         return self._store.exists(source.id)
 
     def revoke(self, source: SourceConfig) -> bool:

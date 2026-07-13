@@ -7,7 +7,7 @@ from typing import Any
 import structlog
 
 from data_pipeline.auth import AuthManager
-from data_pipeline.connectors import connector_registry
+from data_pipeline.connectors import ConnectorError, SelfHealingConnector
 from data_pipeline.observability.metrics import metrics
 from data_pipeline.orchestrator.checkpoint import CheckpointManager
 from data_pipeline.schemas import (
@@ -47,7 +47,18 @@ class ExtractStep:
     async def __call__(self, *, context: dict[str, Any], prior_results: dict[str, Any]) -> int:
         """Execute extraction. Returns record count."""
         pipeline_id = context["run_id"]
-        connector = connector_registry.get_connector(self._source, self._auth)
+        api = self._source.api
+        if api is None:
+            raise ConnectorError(f"Source '{self._source.slug}' has no API configuration")
+        auth_headers = self._auth.get_auth_header(self._source)
+        token = next(iter(auth_headers.values()), "")
+        connector = SelfHealingConnector(
+            api.base_url,
+            credential=token,
+            auth_header=api.auth_header,
+            auth_prefix=api.auth_prefix,
+            default_headers=api.default_headers,
+        )
 
         checkpoint = self._checkpoints.load(pipeline_id, self._source.id)
 

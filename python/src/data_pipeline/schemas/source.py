@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 
 class SourceType(StrEnum):
     API = "api"
-    MCP = "mcp"
     DATABASE = "database"
     FILE = "file"
 
@@ -48,12 +47,6 @@ class APIConfig(BaseModel):
     default_headers: dict[str, str] = Field(default_factory=dict)
 
 
-class MCPConfig(BaseModel):
-    command: str
-    args: list[str] = Field(default_factory=list)
-    env: dict[str, str] = Field(default_factory=dict)
-    transport: str = "stdio"
-
 
 class SourceConfig(BaseModel):
     id: str
@@ -66,7 +59,6 @@ class SourceConfig(BaseModel):
     default_endpoint: str | None = None
     oauth: OAuthConfig | None = None
     api: APIConfig | None = None
-    mcp: MCPConfig | None = None
     icon: str | None = None
     tagline: str | None = None
     last_sync_at: datetime | None = None
