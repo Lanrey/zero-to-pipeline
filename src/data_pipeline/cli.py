@@ -1218,7 +1218,7 @@ Rules:
 def doctor():
     """Run health checks on the pipeline system."""
     checks = [
-        ("Keyring accessible", _check_keyring),
+        ("Credential store accessible", _check_credential_store),
         ("Provider registry loaded", _check_registry),
         ("Checkpoint dir writable", _check_checkpoints),
         ("Source store accessible", _check_source_store),
@@ -1241,9 +1241,11 @@ def doctor():
 
 
 
-def _check_keyring():
-    import keyring
-    keyring.get_password("zero-pipeline-check", "test")
+def _check_credential_store():
+    store = CredentialStore()
+    store.retrieve("__health_check__")
+    if store.backend_type == "file":
+        console.print("  [dim]  (using encrypted file — no OS keychain detected)[/dim]")
 
 
 def _check_registry():
