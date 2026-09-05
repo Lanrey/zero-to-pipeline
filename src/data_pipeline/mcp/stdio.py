@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from data_pipeline.mcp.server import PipelineMCPServer
@@ -29,7 +29,7 @@ def _read_message() -> dict[str, Any] | None:
     body = sys.stdin.buffer.read(content_length)
     if not body:
         return None
-    return json.loads(body.decode("utf-8"))
+    return cast("dict[str, Any] | None", json.loads(body.decode("utf-8")))
 
 
 def _write_message(payload: dict[str, Any]) -> None:

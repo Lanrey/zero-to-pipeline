@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 
 from data_pipeline.auth.credential_store import CredentialStore
@@ -23,7 +25,7 @@ class AuthManager:
     def __init__(self, credential_store: CredentialStore | None = None):
         self._store = credential_store or CredentialStore()
 
-    def authenticate(self, source: SourceConfig) -> dict:
+    def authenticate(self, source: SourceConfig) -> dict[str, Any]:
         """Authenticate a source, returning the credential dict.
 
         For no-auth sources (AuthType.NONE): returns empty dict immediately.
@@ -90,7 +92,7 @@ class AuthManager:
         """Remove stored credentials for a source."""
         return self._store.delete(source.id)
 
-    def _run_oauth_flow(self, source: SourceConfig) -> dict:
+    def _run_oauth_flow(self, source: SourceConfig) -> dict[str, Any]:
         if not source.oauth:
             raise ValueError(f"Source '{source.name}' has no OAuth configuration")
 
@@ -101,7 +103,7 @@ class AuthManager:
         self._store.store(source.id, token_data, expires_in=expires_in)
         return token_data
 
-    def _maybe_refresh(self, source: SourceConfig, credential: dict) -> dict:
+    def _maybe_refresh(self, source: SourceConfig, credential: dict[str, Any]) -> dict[str, Any]:
         """Attempt token refresh if we have a refresh_token."""
         if not source.oauth:
             return credential

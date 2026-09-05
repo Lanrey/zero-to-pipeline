@@ -19,6 +19,7 @@ import platform
 import stat
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, cast
 
 import structlog
 
@@ -87,16 +88,16 @@ class _FileBackend:
         f = Fernet(self._get_key())
         return f.decrypt(ciphertext.encode()).decode()
 
-    def _load(self) -> dict:
+    def _load(self) -> dict[str, Any]:
         if not self._path.exists():
             return {}
         try:
             raw = self._path.read_text(encoding="utf-8")
-            return json.loads(raw)
+            return cast(dict[str, Any], json.loads(raw))
         except (json.JSONDecodeError, OSError):
             return {}
 
-    def _save(self, data: dict) -> None:
+    def _save(self, data: dict[str, Any]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         import contextlib
@@ -147,7 +148,7 @@ class CredentialStore:
         self._service = service_name or settings.keyring_service
         self._backend = self._select_backend()
 
-    def _select_backend(self):
+    def _select_backend(self) -> _KeyringBackend | _FileBackend:
         if _has_keyring_backend():
             return _KeyringBackend(self._service)
         logger.info(
@@ -167,7 +168,7 @@ class CredentialStore:
     def store(
         self,
         source_id: str,
-        credential: dict,
+        credential: dict[str, Any],
         *,
         expires_in: int | None = None,
     ) -> None:
@@ -183,7 +184,7 @@ class CredentialStore:
         self._backend.set_password(source_id, json.dumps(payload))
         logger.info("credential_stored", source_id=source_id, backend=self.backend_type)
 
-    def retrieve(self, source_id: str) -> dict | None:
+    def retrieve(self, source_id: str) -> dict[str, Any] | None:
         raw = self._backend.get_password(source_id)
         if not raw:
             return None
@@ -196,7 +197,7 @@ class CredentialStore:
             self.delete(source_id)
             return None
 
-        return payload["credential"]
+        return cast(dict[str, Any], payload["credential"])
 
     def delete(self, source_id: str) -> bool:
         try:

@@ -18,7 +18,7 @@ def configure_logging(level: str | None = None, log_format: str | None = None) -
     if effective_format == "json":
         renderer = structlog.processors.JSONRenderer()
     else:
-        renderer = structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty())
+        renderer = structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty())  # type: ignore[assignment]
 
     structlog.configure(
         processors=[

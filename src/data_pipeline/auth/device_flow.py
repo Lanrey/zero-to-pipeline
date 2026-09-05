@@ -7,6 +7,7 @@ The user visits a URL and enters a code, similar to `gh auth login`.
 from __future__ import annotations
 
 import time
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -31,7 +32,7 @@ class OAuthDeviceFlow:
         self._client_secret = client_secret
         self._client = httpx.Client(timeout=30)
 
-    def authorize(self) -> dict:
+    def authorize(self) -> dict[str, Any]:
         """Run the full device authorization flow.
 
         Returns a token dict with at minimum: access_token, token_type.
@@ -41,7 +42,7 @@ class OAuthDeviceFlow:
         self._display_user_instructions(device_response)
         return self._poll_for_token(device_response)
 
-    def _request_device_code(self) -> dict:
+    def _request_device_code(self) -> dict[str, Any]:
         url = self._config.device_authorization_url or self._config.authorization_url
         payload = {"client_id": self._config.client_id}
         if self._config.scopes:
@@ -62,9 +63,11 @@ class OAuthDeviceFlow:
                 f"Device authorization response missing fields: {missing}"
             )
 
-        return data
+        return cast(dict[str, Any], data)
 
-    def _display_user_instructions(self, device_response: dict) -> None:
+
+
+    def _display_user_instructions(self, device_response: dict[str, Any]) -> None:
         verification_uri = device_response["verification_uri"]
         user_code = device_response["user_code"]
 
@@ -79,7 +82,7 @@ class OAuthDeviceFlow:
         )
         console.print("[dim]Waiting for authorization...[/dim]")
 
-    def _poll_for_token(self, device_response: dict) -> dict:
+    def _poll_for_token(self, device_response: dict[str, Any]) -> dict[str, Any]:
         device_code = device_response["device_code"]
         interval = device_response.get("interval", 5)
         expires_in = device_response.get("expires_in", 900)
@@ -107,7 +110,7 @@ class OAuthDeviceFlow:
             if "access_token" in data:
                 logger.info("device_flow_authorized")
                 console.print("[green bold]Authorized![/green bold]")
-                return data
+                return cast(dict[str, Any], data)
 
             error = data.get("error")
             if error == "authorization_pending":
@@ -123,7 +126,7 @@ class OAuthDeviceFlow:
 
         raise DeviceFlowError("Authorization timed out.")
 
-    def refresh_token(self, refresh_token: str) -> dict:
+    def refresh_token(self, refresh_token: str) -> dict[str, Any]:
         """Exchange a refresh token for a new access token."""
         payload = {
             "grant_type": "refresh_token",
@@ -139,4 +142,4 @@ class OAuthDeviceFlow:
             headers={"Accept": "application/json"},
         )
         response.raise_for_status()
-        return response.json()
+        return cast(dict[str, Any], response.json())

@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class SourceType(StrEnum):
+class SourceType(str, Enum):
     API = "api"
     DATABASE = "database"
     FILE = "file"
 
 
-class AuthType(StrEnum):
+class AuthType(str, Enum):
     OAUTH2 = "oauth2"
     API_KEY = "api_key"
     BASIC = "basic"
     NONE = "none"
 
 
-class ConnectionStatus(StrEnum):
+class ConnectionStatus(str, Enum):
     CONNECTED = "connected"
     NEEDS_AUTH = "needs_auth"
     FAILED = "failed"

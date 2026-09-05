@@ -4,7 +4,7 @@ import json
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -47,7 +47,7 @@ class LLMProvider(ABC):
     def complete(self, prompt: str, *, timeout: int = 30) -> LLMResult: ...
 
     def chat(
-        self, messages: list[dict], *, system: str, max_tokens: int = 2048, timeout: int = 60
+        self, messages: list[dict[str, Any]], *, system: str, max_tokens: int = 2048, timeout: int = 60
     ) -> LLMResult:
         """Multi-turn chat using full message history. Default impl wraps complete()."""
         last = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
@@ -61,7 +61,7 @@ def _get_api_key(provider_name: str) -> str | None:
     store = CredentialStore()
     cred = store.retrieve(provider_name)
     if cred:
-        key = cred.get("access_token") or cred.get("api_key")
+        key: str | None = cred.get("access_token") or cred.get("api_key")
         if key:
             return key
 
@@ -103,7 +103,7 @@ class OpenAICompatibleProvider(LLMProvider):
         return self._is_custom_url()
 
     def chat(
-        self, messages: list[dict], *, system: str, max_tokens: int = 2048, timeout: int = 60
+        self, messages: list[dict[str, Any]], *, system: str, max_tokens: int = 2048, timeout: int = 60
     ) -> LLMResult:
         return self._invoke(messages, system=system, max_tokens=max_tokens, timeout=timeout)
 
@@ -120,7 +120,7 @@ class OpenAICompatibleProvider(LLMProvider):
 
     def _invoke(
         self,
-        messages: list[dict],
+        messages: list[dict[str, Any]],
         *,
         system: str,
         max_tokens: int = 1024,
@@ -185,7 +185,7 @@ class AnthropicProvider(LLMProvider):
         return _get_api_key("anthropic") is not None
 
     def chat(
-        self, messages: list[dict], *, system: str, max_tokens: int = 2048, timeout: int = 60
+        self, messages: list[dict[str, Any]], *, system: str, max_tokens: int = 2048, timeout: int = 60
     ) -> LLMResult:
         return self._invoke(messages, system=system, max_tokens=max_tokens, timeout=timeout)
 
@@ -202,7 +202,7 @@ class AnthropicProvider(LLMProvider):
 
     def _invoke(
         self,
-        messages: list[dict],
+        messages: list[dict[str, Any]],
         *,
         system: str,
         max_tokens: int = 1024,
@@ -381,14 +381,14 @@ def _try_parse_json(text: str) -> dict[str, Any] | None:
 
     if end > start:
         try:
-            return json.loads(text[start:end])
+            return cast(dict[str, Any], json.loads(text[start:end]))
         except json.JSONDecodeError:
             pass
 
     last_brace = text.rfind("}")
     if last_brace > start:
         try:
-            return json.loads(text[start : last_brace + 1])
+            return cast(dict[str, Any], json.loads(text[start : last_brace + 1]))
         except json.JSONDecodeError:
             pass
 

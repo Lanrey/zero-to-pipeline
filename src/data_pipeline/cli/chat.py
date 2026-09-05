@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import typer
 from rich.markdown import Markdown
@@ -67,7 +68,7 @@ def chat_command(
         known = ", ".join(provider_registry.known_providers)
         return f"Configured sources:\n{sources_str}\n\nKnown provider presets: {known}"
 
-    def _execute_action(action: dict) -> str | None:
+    def _execute_action(action: dict[str, Any]) -> str | None:
         name = action.get("action", "none")
         if name == "none":
             return None
@@ -110,7 +111,7 @@ def chat_command(
             return f"Action error: {e}"
         return None
 
-    history: list[dict] = []
+    history: list[dict[str, Any]] = []
 
     def _turn(user_msg: str) -> None:
         system = SYSTEM_PROMPT + f"\n\nCurrent pipeline state:\n{_context_snapshot()}"
@@ -125,7 +126,7 @@ def chat_command(
             return
 
         raw = result.text
-        action: dict = {"action": "none"}
+        action: dict[str, Any] = {"action": "none"}
         display_text = raw
 
         last_brace = raw.rfind("{")

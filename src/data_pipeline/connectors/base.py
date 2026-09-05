@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import structlog
@@ -82,7 +82,7 @@ class APIConnector:
         )
         return self
 
-    async def __aexit__(self, *exc) -> None:
+    async def __aexit__(self, *exc: Any) -> None:
         if self._client:
             await self._client.aclose()
             self._client = None
@@ -209,11 +209,11 @@ class PaginationStrategy:
 
     def extract_records(self, data: Any) -> list[dict[str, Any]]:
         if isinstance(data, list):
-            return data
+            return cast(list[dict[str, Any]], data)
         if isinstance(data, dict):
             for key in ("results", "data", "items", "nodes", "records", "entries"):
                 if key in data and isinstance(data[key], list):
-                    return data[key]
+                    return cast(list[dict[str, Any]], data[key])
         return []
 
     def get_cursor(self, data: Any, state: dict[str, Any]) -> str | None:
@@ -241,14 +241,26 @@ class OffsetPagination(PaginationStrategy):
             page = int(checkpoint.metadata["page"])
         return {"page": page, "cursor": str(page)}
 
-    def apply_to_request(self, params, json_body, state):
+    def apply_to_request(
+        self,
+        params: dict[str, Any],
+        json_body: dict[str, Any] | None,
+        state: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
         params = {**params, self._param_name: state["page"], "per_page": self._page_size}
         return params, json_body
 
-    def get_cursor(self, data, state):
+    def get_cursor(
+        self, data: Any, state: dict[str, Any]
+    ) -> str | None:
         return str(state["page"])
 
-    def next_page(self, data, response, state):
+    def next_page(
+        self,
+        data: Any,
+        response: httpx.Response,
+        state: dict[str, Any],
+    ) -> dict[str, Any] | None:
         records = self.extract_records(data)
         if len(records) < self._page_size:
             return None
@@ -277,7 +289,12 @@ class CursorPagination(PaginationStrategy):
         self._page_size = page_size
         self._in_body = in_body
 
-    def apply_to_request(self, params, json_body, state):
+    def apply_to_request(
+        self,
+        params: dict[str, Any],
+        json_body: dict[str, Any] | None,
+        state: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
         cursor = state.get("cursor")
         if self._in_body:
             body = json_body or {}
@@ -291,12 +308,19 @@ class CursorPagination(PaginationStrategy):
                 params[self._cursor_param] = cursor
             return params, json_body
 
-    def get_cursor(self, data, state):
+    def get_cursor(
+        self, data: Any, state: dict[str, Any]
+    ) -> str | None:
         if isinstance(data, dict):
             return data.get(self._cursor_field) or state.get("cursor")
         return state.get("cursor")
 
-    def next_page(self, data, response, state):
+    def next_page(
+        self,
+        data: Any,
+        response: httpx.Response,
+        state: dict[str, Any],
+    ) -> dict[str, Any] | None:
         if not isinstance(data, dict):
             return None
         has_more = data.get(self._has_more_field, False)
@@ -316,7 +340,12 @@ class MlflowRunsPagination(PaginationStrategy):
     def __init__(self, page_size: int = 5):
         self._page_size = page_size
 
-    def apply_to_request(self, params, json_body, state):
+    def apply_to_request(
+        self,
+        params: dict[str, Any],
+        json_body: dict[str, Any] | None,
+        state: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
         body = dict(json_body or {})
         body["max_results"] = self._page_size
         cursor = state.get("cursor")
@@ -326,19 +355,27 @@ class MlflowRunsPagination(PaginationStrategy):
             body.pop("page_token", None)
         return params, body
 
-    def extract_records(self, data):
+    def extract_records(
+        self, data: Any
+    ) -> list[dict[str, Any]]:
         if isinstance(data, dict):
-            # MLflow returns {"runs": [...], "next_page_token": "..."}
             runs = data.get("runs", [])
             return runs if isinstance(runs, list) else []
         return []
 
-    def get_cursor(self, data, state):
+    def get_cursor(
+        self, data: Any, state: dict[str, Any]
+    ) -> str | None:
         if isinstance(data, dict):
             return data.get("next_page_token") or state.get("cursor")
         return state.get("cursor")
 
-    def next_page(self, data, response, state):
+    def next_page(
+        self,
+        data: Any,
+        response: httpx.Response,
+        state: dict[str, Any],
+    ) -> dict[str, Any] | None:
         if not isinstance(data, dict):
             return None
         token = data.get("next_page_token")
@@ -354,7 +391,12 @@ class GraphQLCursorPagination(PaginationStrategy):
         self._page_size = page_size
         self._data_path = data_path
 
-    def apply_to_request(self, params, json_body, state):
+    def apply_to_request(
+        self,
+        params: dict[str, Any],
+        json_body: dict[str, Any] | None,
+        state: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
         body = json_body or {}
         variables = body.get("variables", {})
         variables["first"] = self._page_size
@@ -364,34 +406,43 @@ class GraphQLCursorPagination(PaginationStrategy):
         body["variables"] = variables
         return params, body
 
-    def extract_records(self, data):
+    def extract_records(
+        self, data: Any
+    ) -> list[dict[str, Any]]:
         if not isinstance(data, dict):
             return []
         gql_data = data.get("data", data)
         if isinstance(gql_data, dict):
             for value in gql_data.values():
                 if isinstance(value, dict) and "nodes" in value:
-                    return value["nodes"]
+                    return cast(list[dict[str, Any]], value["nodes"])
                 if isinstance(value, dict) and "edges" in value:
-                    return [edge["node"] for edge in value["edges"]]
+                    return cast(list[dict[str, Any]], [edge["node"] for edge in value["edges"]])
         return []
 
-    def get_cursor(self, data, state):
+    def get_cursor(
+        self, data: Any, state: dict[str, Any]
+    ) -> str | None:
         page_info = self._get_page_info(data)
         return page_info.get("endCursor") if page_info else state.get("cursor")
 
-    def next_page(self, data, response, state):
+    def next_page(
+        self,
+        data: Any,
+        response: httpx.Response,
+        state: dict[str, Any],
+    ) -> dict[str, Any] | None:
         page_info = self._get_page_info(data)
         if not page_info or not page_info.get("hasNextPage"):
             return None
         return {"cursor": page_info["endCursor"]}
 
-    def _get_page_info(self, data: Any) -> dict | None:
+    def _get_page_info(self, data: Any) -> dict[str, Any] | None:
         if not isinstance(data, dict):
             return None
         gql_data = data.get("data", data)
         if isinstance(gql_data, dict):
             for value in gql_data.values():
                 if isinstance(value, dict) and "pageInfo" in value:
-                    return value["pageInfo"]
+                    return cast(dict[str, Any], value["pageInfo"])
         return None

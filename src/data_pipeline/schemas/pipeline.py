@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class SyncMode(StrEnum):
+class SyncMode(str, Enum):
     FULL = "full"
     INCREMENTAL = "incremental"
 
 
-class StepStatus(StrEnum):
+class StepStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"

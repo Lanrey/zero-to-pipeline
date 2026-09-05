@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -83,8 +83,9 @@ class PipelineEngine:
                         return result
                     else:
                         step_results[step.name] = outcome
-                        result.steps.append(outcome)
-                        result.total_records += outcome.records_processed
+                        step_outcome = cast(StepResult, outcome)
+                        result.steps.append(step_outcome)
+                        result.total_records += step_outcome.records_processed
 
             result.status = StepStatus.COMPLETED
             result.completed_at = datetime.now()
@@ -127,6 +128,7 @@ class PipelineEngine:
                 started_at=started_at,
                 completed_at=datetime.now(),
             )
+            assert step_result.completed_at is not None
             logger.info(
                 "step_completed",
                 step=step.name,

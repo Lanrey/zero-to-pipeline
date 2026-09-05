@@ -1,0 +1,6 @@
+include CHANGELOG.md
+include CONTRIBUTING.md
+include AGENTS.md
+include docs/*.md
+include docs/how-to/*.md
+recursive-include src/data_pipeline *.typed
