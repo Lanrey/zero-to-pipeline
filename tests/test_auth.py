@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -180,6 +181,7 @@ class TestBackendSelection:
             store = CredentialStore(service_name="test")
             assert store.backend_type == "keyring"
 
+    @pytest.mark.skipif(sys.platform != "darwin", reason="Only runs on macOS with real keychain")
     def test_has_keyring_backend_true_on_macos(self):
         assert _has_keyring_backend()
 
