@@ -71,13 +71,36 @@ pipeline sync run mlflow
 | **Pagination** | Infers cursor/offset/GraphQL from response shape |
 | **Orchestrator** | Checkpoints every batch, runs steps as a parallel DAG |
 
-## Configuration
+## LLM provider (BYOK)
 
-The CLI stores source configs and checkpoints locally. Set `ANTHROPIC_API_KEY` for LLM-powered source discovery:
+zero-pipeline uses an LLM to discover API configurations. Bring your own key for any supported provider:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+# Option A: OpenAI (default)
+pipeline auth set openai --token sk-proj-...
+
+# Option B: Anthropic
+export PIPELINE_LLM_PROVIDER=anthropic
+pipeline auth set anthropic --token sk-ant-...
+
+# Option C: Local model (Ollama, vLLM) — no key needed
+export PIPELINE_LLM_BASE_URL=http://localhost:11434
+export PIPELINE_LLM_MODEL=llama3.2
 ```
+
+The OpenAI-compatible provider works with OpenAI, Azure, Groq, Together, Mistral, DeepSeek, OpenRouter, Ollama, vLLM, and LM Studio. Keys are stored in the OS keychain, never on disk.
+
+See [docs/how-to/configure-llm-providers.md](docs/how-to/configure-llm-providers.md) for full setup options.
+
+## Configuration
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `PIPELINE_LLM_PROVIDER` | `openai` | LLM provider: `openai` or `anthropic` |
+| `PIPELINE_LLM_MODEL` | per-provider | Model ID (e.g. `gpt-4o`, `claude-sonnet-4-20250514`) |
+| `PIPELINE_LLM_BASE_URL` | per-provider | Override for Azure, Ollama, Groq, etc. |
+
+All settings support `.env` files. See [docs/reference.md](docs/reference.md) for the complete list.
 
 ## Development
 
@@ -95,6 +118,17 @@ ruff check src/data_pipeline/
 # Type check
 mypy src/data_pipeline/
 ```
+
+## Documentation
+
+| Doc | What it covers |
+|-----|---------------|
+| [Tutorial: build your first pipeline](docs/tutorial.md) | End-to-end walkthrough for new users |
+| [How to configure LLM providers](docs/how-to/configure-llm-providers.md) | BYOK setup: OpenAI, Anthropic, Ollama, Azure, Groq |
+| [How to connect any API](docs/how-to/connect-any-api.md) | Known providers, unknown APIs, Docker, credentials |
+| [How to add a new LLM provider](docs/how-to/add-llm-provider.md) | Contributor guide for extending the LLM layer |
+| [Reference](docs/reference.md) | All env vars, CLI commands, provider presets, interfaces |
+| [Architecture](docs/explanation.md) | How discovery, self-healing, and BYOK work under the hood |
 
 ## License
 

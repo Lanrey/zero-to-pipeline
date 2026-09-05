@@ -28,5 +28,9 @@ class PipelineSettings(BaseSettings):
 
     keyring_service: str = "zero-pipeline"
 
+    llm_provider: str = "openai"
+    llm_model: str = ""
+    llm_base_url: str = ""
+
 
 settings = PipelineSettings()

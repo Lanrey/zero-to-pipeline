@@ -1043,7 +1043,7 @@ def chat_command(
 
     llm = get_llm_provider()
     if not llm:
-        console.print("[red]LLM not available.[/red] Check AWS credentials.")
+        console.print("[red]LLM not available.[/red] Run: pipeline auth set <provider>")
         return
 
     source_store = SourceStore()
