@@ -179,3 +179,19 @@ The assistant understands natural language and executes pipeline commands for yo
 - [How to connect any API](how-to/connect-any-api.md) — internal APIs, custom feature stores, unknown providers
 - [Reference: configuration options](reference.md) — all env vars, CLI commands, and settings
 - [Architecture: how zero-pipeline works](explanation.md) — LLM discovery, self-healing, and the connector model
+
+---
+
+### Validation checklist
+
+Use this when updating this tutorial:
+
+**Pre-hook (before writing):**
+- [ ] Is the goal stated in the first paragraph as a single, beginner-achievable outcome?
+- [ ] Are all prerequisites listed and minimal (Python, terminal, API key)?
+- [ ] Can every step be verified independently with a visible result?
+
+**Post-hook (after writing):**
+- [ ] Can a beginner complete every step end-to-end without external help?
+- [ ] Does each numbered step produce a testable output (CLI output, file, status message)?
+- [ ] Are there no explanatory digressions that belong in a how-to guide or explanation?

@@ -14,6 +14,8 @@ from data_pipeline.connectors.base import (
 from data_pipeline.connectors.discovery import APIDiscovery
 from data_pipeline.connectors.llm_discovery import (
     available_providers as available_llm_providers,
+)
+from data_pipeline.connectors.llm_discovery import (
     discover_auth_docs,
     discover_provider_config,
     get_llm_provider,

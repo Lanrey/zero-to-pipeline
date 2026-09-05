@@ -158,3 +158,15 @@ pipeline auth set myprovider --token ...
 
 - [Reference: LLM provider interface](../reference.md#llm-provider-interface)
 - [Architecture: BYOK model-agnostic LLM layer](../explanation.md#byok-model-agnostic-llm-layer)
+
+---
+
+### Validation checklist
+
+**Pre-hook (before writing):**
+- [ ] Is this a task a contributor would search for ("how do I add a provider")?
+- [ ] Are prerequisites clearly listed?
+
+**Post-hook (after writing):**
+- [ ] Can a developer follow the 5 steps without external help?
+- [ ] Does each step produce a testable result (import works, tests pass)?

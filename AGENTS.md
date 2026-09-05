@@ -20,3 +20,5 @@
 
 - Library code lives in `src/data_pipeline/` (src-layout via `package-dir = {"" = "src"}` in pyproject.toml).
 - `feast`, `pandas`, `scikit-learn`, `mlflow` are not dependencies — the core library is a general data-pipeline toolkit with no ML opinions.
+- The CLI is a package, not a single file: `src/data_pipeline/cli/__init__.py` is the entry point; commands are in `source.py`, `auth.py`, `sync.py`, `chat.py`, with shared utilities in `helpers.py` and Docker management in `docker.py`.
+- `cli/helpers.py` provides `resolve_for_provider()` — the single entry point for turning a provider name into a `ResolvedConnection` (used by both `source_test` and `sync_run`).

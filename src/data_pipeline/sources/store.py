@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -82,11 +83,8 @@ class SourceStore:
             return False
         path.unlink()
         source_dir = self._source_dir(slug)
-        # Remove the directory if it's now empty
-        try:
+        with contextlib.suppress(OSError):
             source_dir.rmdir()
-        except OSError:
-            pass  # directory not empty — leave it
         logger.info("source_deleted", slug=slug)
         return True
 

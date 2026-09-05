@@ -114,3 +114,15 @@ The connector supports four pagination strategies, automatically selected based 
 - [Tutorial: build your first pipeline](tutorial.md)
 - [How to configure LLM providers](how-to/configure-llm-providers.md)
 - [Reference: configuration options](reference.md)
+
+---
+
+### Validation checklist
+
+**Pre-hook (before writing):**
+- [ ] Is the concept framed as something to *understand*, not something to *do*?
+- [ ] Does it answer *why* or *how does X work* rather than *how do I X*?
+
+**Post-hook (after writing):**
+- [ ] Can a reader explain the concept in their own words after reading?
+- [ ] Are there no step-by-step instructions or technical specs mixed in?

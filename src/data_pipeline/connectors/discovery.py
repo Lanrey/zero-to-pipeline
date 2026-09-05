@@ -164,9 +164,8 @@ class APIDiscovery:
                 content_type = response.headers.get("content-type", "")
                 if "json" in content_type:
                     data = response.json()
-                    if isinstance(data, dict):
-                        if any(k in data for k in ("next_cursor", "next_page_token", "has_more")):
-                            result["pagination_style"] = "cursor"
+                    if isinstance(data, dict) and any(k in data for k in ("next_cursor", "next_page_token", "has_more")):
+                        result["pagination_style"] = "cursor"
 
             except httpx.ConnectError:
                 result["reachable"] = False

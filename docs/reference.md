@@ -41,6 +41,18 @@ When `PIPELINE_LLM_BASE_URL` is set to a non-default URL and no API key is confi
 
 ## CLI commands
 
+All CLI commands are organized into sub-apps. The entry point is `data_pipeline.cli` (a package, not a single file):
+
+| Module | Contents |
+|--------|----------|
+| `cli/__init__.py` | App creation, `doctor` command, `main()`, smart suggestion engine |
+| `cli/source.py` | `source add/list/list-providers/remove/discover/test` |
+| `cli/auth.py` | `auth login/set/status/revoke` |
+| `cli/sync.py` | `sync run/status` |
+| `cli/chat.py` | Interactive AI assistant REPL |
+| `cli/docker.py` | Local Docker container management (`LocalContainerConfig` dataclass, `ensure_local()`) |
+| `cli/helpers.py` | Shared utilities: `show_auth_docs()`, `resolve_request_params()`, `resolve_for_provider()` |
+
 ### `pipeline source`
 
 | Command | Description |
@@ -78,6 +90,36 @@ pipeline chat "add mlflow"       # one-shot message
 ### `pipeline doctor`
 
 Runs health checks: keyring access, registry, checkpoint directory, source store.
+
+## Internals: connection resolution
+
+The `cli/helpers.py` module provides `resolve_for_provider()`, the single entry point for turning a provider name into a usable connection:
+
+```python
+@dataclass
+class ResolvedConnection:
+    url: str
+    auth_header: str
+    auth_prefix: str
+    token: str
+    no_auth: bool
+    default_headers: dict[str, str]
+    health_endpoint: str = "/"
+
+
+def resolve_for_provider(
+    provider: str,
+    *,
+    base_url: str | None = None,
+) -> ResolvedConnection: ...
+```
+
+Resolution merges three layers:
+1. **Registry preset** (or name-based inference) — base URL, auth type, pagination
+2. **Persisted source config** — user overrides from `pipeline source add --base-url`
+3. **Credential store** — token from OS keychain
+
+Both `source_test` and `sync_run` use `resolve_for_provider()`, eliminating ~40 lines of duplicated config resolution.
 
 ## Provider presets
 
@@ -157,3 +199,15 @@ Users select it with `PIPELINE_LLM_PROVIDER=my_provider`.
 | `~/.zero-pipeline/checkpoints/` | Sync checkpoint files (cursor state) |
 | `~/.zero-pipeline/output/<provider>/` | Extracted JSONL data files |
 | `~/.zero-pipeline/workspaces/default/` | Default workspace directory |
+
+---
+
+### Validation checklist
+
+**Pre-hook (before writing):**
+- [ ] Is each entry a single factual unit (name, type, default, description)?
+- [ ] Are entries organized in a consistent, scannable format (tables, lists)?
+
+**Post-hook (after writing):**
+- [ ] Can a user find any specific setting or command in under 30 seconds?
+- [ ] Are all facts current and version-stamped where relevant?

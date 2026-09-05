@@ -108,3 +108,15 @@ pipeline source remove github
 - [Reference: CLI commands](../reference.md#cli-commands)
 - [Reference: provider presets](../reference.md#provider-presets)
 - [Architecture: how discovery works](../explanation.md#llm-driven-discovery)
+
+---
+
+### Validation checklist
+
+**Pre-hook (before writing):**
+- [ ] Is the task framed as a problem to solve (not a learning exercise)?
+- [ ] Are assumptions and prerequisite knowledge stated up front?
+
+**Post-hook (after writing):**
+- [ ] Can an experienced user complete the task without confusion?
+- [ ] Are there no conceptual digressions that belong in an explanation?

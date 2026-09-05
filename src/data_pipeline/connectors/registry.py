@@ -19,46 +19,32 @@ Unknown providers fall through to LLM-driven or name-based inference.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 from data_pipeline.schemas import AuthType, InferredConfig
 
 
+@dataclass(frozen=True)
 class ProviderPreset:
     """A preset configuration for a known provider.
 
     These are hints, not hard dependencies. The system works without them —
-    they just make the "zero config" experience faster for popular APIs.
+    they just make the \u201czero config\u201d experience faster for popular APIs.
     """
 
-    def __init__(
-        self,
-        name: str,
-        base_url: str,
-        auth_type: AuthType = AuthType.API_KEY,
-        *,
-        auth_header: str = "Authorization",
-        auth_prefix: str = "Bearer",
-        pagination_style: str = "offset",
-        api_style: str = "rest",
-        rate_limit_rpm: int | None = None,
-        default_headers: dict[str, str] | None = None,
-        default_endpoints: dict[str, str] | None = None,
-        health_endpoint: str = "/",
-        docs_url: str | None = None,
-        tagline: str | None = None,
-    ):
-        self.name = name
-        self.base_url = base_url
-        self.auth_type = auth_type
-        self.auth_header = auth_header
-        self.auth_prefix = auth_prefix
-        self.pagination_style = pagination_style
-        self.api_style = api_style
-        self.rate_limit_rpm = rate_limit_rpm
-        self.default_headers = default_headers or {}
-        self.default_endpoints = default_endpoints or {}
-        self.health_endpoint = health_endpoint
-        self.docs_url = docs_url
-        self.tagline = tagline
+    name: str
+    base_url: str
+    auth_type: AuthType = AuthType.API_KEY
+    auth_header: str = "Authorization"
+    auth_prefix: str = "Bearer"
+    pagination_style: str = "offset"
+    api_style: str = "rest"
+    rate_limit_rpm: int | None = None
+    default_headers: dict[str, str] = field(default_factory=dict)
+    default_endpoints: dict[str, str] = field(default_factory=dict)
+    health_endpoint: str = "/"
+    docs_url: str | None = None
+    tagline: str | None = None
 
 
 class ProviderRegistry:

@@ -131,3 +131,15 @@ LLM not available. Run: pipeline auth set <provider>
 
 - [Reference: configuration options](../reference.md#llm-provider-settings)
 - [Tutorial: build your first pipeline](../tutorial.md)
+
+---
+
+### Validation checklist
+
+**Pre-hook (before writing):**
+- [ ] Is the task framed as a specific problem to solve?
+- [ ] Are assumptions stated (e.g. familiarity with LLM concepts)?
+
+**Post-hook (after writing):**
+- [ ] Can a user with assumed knowledge follow every step without confusion?
+- [ ] Are all variations and alternatives noted without cluttering the main flow?

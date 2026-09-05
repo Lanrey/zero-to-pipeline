@@ -39,6 +39,8 @@ dev = [
     "respx>=0.21",
     "ruff>=0.5",
     "mypy>=1.10",
+    "radon>=6.0",
+    "wily>=1.0",
 ]
 
 [project.scripts]

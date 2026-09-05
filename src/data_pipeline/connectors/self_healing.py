@@ -11,6 +11,7 @@ connector analyzes the failure and adapts:
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -40,16 +41,13 @@ AUTH_FORMATS = [
 ]
 
 
+@dataclass
 class HealingAction:
     """A corrective action applied after a failure."""
 
-    def __init__(self, action_type: str, description: str, params: dict[str, Any]):
-        self.action_type = action_type
-        self.description = description
-        self.params = params
-
-    def __repr__(self):
-        return f"HealingAction({self.action_type}: {self.description})"
+    action_type: str
+    description: str
+    params: dict[str, Any]
 
 
 class SelfHealingConnector:
