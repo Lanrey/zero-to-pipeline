@@ -45,7 +45,7 @@ Rules:
 
 def chat_command(
     message: str | None = typer.Argument(None, help="Opening message (optional \u2014 omit to start interactive session)"),
-):
+) -> None:
     """Interactive AI assistant for Zero to Pipeline."""
     from data_pipeline.connectors.llm_discovery import get_llm_provider
 

@@ -43,20 +43,20 @@ def configure_logging_from_cli(log_level: str = "WARNING", log_format: str = "co
 def main_callback(
     log_level: str = typer.Option("WARNING", help="Log level"),
     log_format: str = typer.Option("console", help="Log format: json or console"),
-):
+) -> None:
     configure_logging_from_cli(log_level=log_level, log_format=log_format)
 
 
 @app.command("chat")
 def chat(
     message: str | None = typer.Argument(None, help="Opening message (optional \u2014 omit to start interactive session)"),
-):
+) -> None:
     """Interactive AI assistant for Zero to Pipeline."""
     chat_command(message)
 
 
 @app.command("doctor")
-def doctor():
+def doctor() -> None:
     """Run health checks on the pipeline system."""
     checks = [
         ("Credential store accessible", _check_credential_store),
@@ -81,20 +81,20 @@ def doctor():
         raise typer.Exit(1)
 
 
-def _check_credential_store():
+def _check_credential_store() -> None:
     store = CredentialStore()
     store.retrieve("__health_check__")
     if store.backend_type == "file":
         console.print("  [dim]  (using encrypted file \u2014 no OS keychain detected)[/dim]")
 
 
-def _check_registry():
+def _check_registry() -> None:
     providers = provider_registry.known_providers
     if not providers:
         raise RuntimeError("No providers in registry")
 
 
-def _check_checkpoints():
+def _check_checkpoints() -> None:
     from data_pipeline.config import settings
     settings.checkpoint_dir.mkdir(parents=True, exist_ok=True)
     test_file = settings.checkpoint_dir / ".write_test"
@@ -102,7 +102,7 @@ def _check_checkpoints():
     test_file.unlink()
 
 
-def _check_source_store():
+def _check_source_store() -> None:
     store = SourceStore()
     store._base_dir.mkdir(parents=True, exist_ok=True)
     test_file = store._base_dir / ".write_test"
@@ -153,7 +153,7 @@ _SUGGESTIONS: dict[tuple[str, ...], str] = {
 }
 
 
-def main():
+def main() -> None:
     raw_args = [a for a in sys.argv[1:] if not a.startswith("-")]
     provider = raw_args[-1] if raw_args and raw_args[-1] not in _COMMAND_KEYWORDS else "<provider>"
 

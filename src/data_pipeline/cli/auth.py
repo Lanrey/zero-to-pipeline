@@ -17,7 +17,7 @@ auth_app = typer.Typer(help="Manage authentication")
 @auth_app.command("login")
 def auth_login(
     provider: str = typer.Argument(help="Provider to authenticate via OAuth Device Flow"),
-):
+) -> None:
     """Authenticate a source using OAuth Device Flow (browser-based)."""
     preset = provider_registry.get_preset(provider)
     if not preset:
@@ -34,7 +34,7 @@ def auth_login(
 def auth_set(
     provider: str = typer.Argument(help="Provider name"),
     token: str | None = typer.Option(None, "--token", help="API token (prompted if not provided)"),
-):
+) -> None:
     """Store an API key/token for a provider in the OS keychain."""
     if not token:
         import getpass
@@ -55,7 +55,7 @@ def auth_set(
 
 
 @auth_app.command("status")
-def auth_status():
+def auth_status() -> None:
     """Show authentication status for all sources \u2014 preset and user-added."""
     table = Table(title="Auth Status")
     table.add_column("Provider", style="cyan")
@@ -99,7 +99,7 @@ def auth_status():
 @auth_app.command("revoke")
 def auth_revoke(
     provider: str = typer.Argument(help="Provider to revoke credentials for"),
-):
+) -> None:
     """Remove stored credentials for a provider."""
     store = CredentialStore()
     if store.delete(provider):

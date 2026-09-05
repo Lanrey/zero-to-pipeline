@@ -34,7 +34,7 @@ def sync_run(
     path: str | None = typer.Argument(None, help="API endpoint path (optional if source has default)"),
     base_url: str | None = typer.Option(None, "--base-url", help="Override base URL"),
     full: bool = typer.Option(False, "--full", help="Force full sync (ignore checkpoints)"),
-):
+) -> None:
     """Run a data extraction from any API endpoint with self-healing."""
     from data_pipeline.orchestrator import CheckpointManager
 
@@ -76,7 +76,7 @@ def sync_run(
     if "mlflow/runs/search" in effective_path:
         pagination_override = MlflowRunsPagination(page_size=5)
 
-    async def _run():
+    async def _run() -> int:
         count = 0
         last_cursor: str | None = None
         cp = existing_checkpoint
@@ -176,7 +176,7 @@ def _resolve_default_path(provider: str) -> str | None:
 
 
 @sync_app.command("status")
-def sync_status():
+def sync_status() -> None:
     """Show sync status and checkpoint info."""
     from data_pipeline.orchestrator import CheckpointManager
 

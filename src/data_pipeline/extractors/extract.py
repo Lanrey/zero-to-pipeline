@@ -68,21 +68,22 @@ class ExtractStep:
         with metrics.timer(
             "extract_duration", provider=self._source.provider, resource=self._resource_type
         ):
-            async with connector:
-                async for record in connector.extract(
-                    self._resource_type,
-                    sync_mode=self._sync_mode,
-                    checkpoint=checkpoint,
-                ):
-                    records.append(record)
-                    count += 1
+            async for record in connector.extract_with_healing(
+                "GET",
+                self._resource_type,
+                source_id=self._source.id,
+                resource_type=self._resource_type,
+                checkpoint=checkpoint,
+            ):
+                records.append(record)
+                count += 1
 
-                    if len(records) >= self._batch_size:
-                        self._flush_batch(records, pipeline_id)
-                        records = []
-
-                if records:
+                if len(records) >= self._batch_size:
                     self._flush_batch(records, pipeline_id)
+                    records = []
+
+            if records:
+                self._flush_batch(records, pipeline_id)
 
         metrics.increment("records_extracted", count, provider=self._source.provider)
         logger.info(
@@ -94,7 +95,6 @@ class ExtractStep:
         return count
 
     def _flush_batch(self, records: list[ExtractedRecord], pipeline_id: str) -> None:
-        """Flush a batch of records and update checkpoint."""
         if not records:
             return
 

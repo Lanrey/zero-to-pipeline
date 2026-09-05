@@ -1,123 +1,190 @@
-# zero-pipeline
+# Zero to Pipeline
 
-Self-configuring data ingestion framework. Connect to any API source without writing connector classes, YAML, or pagination logic.
+**Self-configuring data ingestion — connect any API without writing connectors.**
 
-## What it does
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)]()
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
 
-- **LLM-discovered connectors** — give it a provider name, it figures out the auth type, endpoints, and pagination style
-- **Self-healing auth** — rotates header formats on 403s, surfaces docs URLs before prompting for credentials
-- **Automatic pagination** — detects cursor, offset, and GraphQL patterns from API responses
-- **Checkpointed orchestration** — saves cursor state after every batch; incremental syncs resume where they left off
-- **Secure credential storage** — tokens go to the OS keychain, never to disk or `.env` files
+Zero to Pipeline is a Python framework that turns any REST or GraphQL API into a data source in a single command. No connector classes, no YAML schemas, no pagination boilerplate. The framework uses an LLM (your own API key) to discover auth type, endpoints, and pagination style from a provider name — then extracts data with self-healing, checkpointed syncs.
 
-## Install
+---
 
-```bash
-pip install zero-pipeline
-```
+## Why Zero to Pipeline?
 
-Or with [uv](https://docs.astral.sh/uv/):
+Traditional ETL tools require you to write a connector for every API. Each one hard-codes the base URL, auth format, pagination strategy, and response schema. This doesn't scale.
 
-```bash
-uv add zero-pipeline
-```
+Zero to Pipeline inverts the problem: **you say what to connect, and the framework figures out how.**
 
-Requires Python 3.11+.
+| Problem | Solution |
+|---------|----------|
+| Each API needs a custom connector | LLM discovers config from the provider name |
+| Auth breaks between API versions | Self-healing rotates header formats on 401/403 |
+| Pagination is subtly different per API | Auto-detects cursor, offset, link-header, and GraphQL |
+| Full re-syncs are wasteful | Checkpointed extraction — resumes from the last cursor |
+| Credentials leak into config files | OS keychain storage, never plaintext on disk |
+
+---
 
 ## Quick start
 
 ```bash
-# Check everything is working
-pipeline doctor
+# Install (Python 3.11+)
+pip install zero-pipeline
 
-# Add a source (LLM discovers auth, endpoints, pagination)
-pipeline source add <provider-name>
+# Store your LLM API key (for auto-discovery)
+pipeline auth set openai --token sk-proj-...
+
+# Add a data source — any API name works
+pipeline source add mlflow
 
 # Test the connection
-pipeline source test <provider-name>
+pipeline source test mlflow
 
-# Sync data (first run fetches everything, subsequent runs are incremental)
-pipeline sync run <provider-name>
-
-# See what's connected
-pipeline source list
-pipeline auth status
+# Extract data (first run: full sync; subsequent runs: incremental)
+pipeline sync run mlflow
 ```
 
-## Example: adding an API source
+---
 
-```bash
-# Add with explicit config
-pipeline source add mlflow \
-    --base-url http://127.0.0.1:5001 \
-    --auth-type none
+## Use cases
 
-# First sync: fetches all records, saves cursor
-pipeline sync run mlflow
-# → 13 records extracted, checkpoint saved
+**Data engineering teams** — ingest from MLflow, W&B, Airflow, Prometheus, Grafana, or any internal API without writing and maintaining connector code.
 
-# Second sync: resumes from cursor
-pipeline sync run mlflow
-# → 3 new records (not 13)
-```
+**ML platform teams** — pull experiment metadata, run metrics, and model registry data from experiment tracking tools into your data lake.
+
+**Platform engineers** — connect to GitHub, Linear, Notion, or Prefect and sync issues, projects, and workflow state into a queryable format.
+
+**Anyone building internal tools** — point at any REST or GraphQL API and get checkpointed, paginated extraction in minutes instead of days.
+
+---
 
 ## How it works
 
-| Layer | Problem it solves |
-|-------|-------------------|
-| **Registry + LLM** | Discovers auth type and endpoints from a provider name |
-| **Secure Auth** | Stores tokens in OS keychain, never plaintext |
-| **Self-Healing** | Rotates auth header formats until one works |
-| **Pagination** | Infers cursor/offset/GraphQL from response shape |
-| **Orchestrator** | Checkpoints every batch, runs steps as a parallel DAG |
-
-## LLM provider (BYOK)
-
-zero-pipeline uses an LLM to discover API configurations. Bring your own key for any supported provider:
-
-```bash
-# Option A: OpenAI (default)
-pipeline auth set openai --token sk-proj-...
-
-# Option B: Anthropic
-export PIPELINE_LLM_PROVIDER=anthropic
-pipeline auth set anthropic --token sk-ant-...
-
-# Option C: Local model (Ollama, vLLM) — no key needed
-export PIPELINE_LLM_BASE_URL=http://localhost:11434
-export PIPELINE_LLM_MODEL=llama3.2
+```
+pipeline source add <provider>
+        │
+        ▼
+┌─────────────────────┐
+│  1. Provider         │  Known presets (MLflow, GitHub, Airflow, etc.)
+│     Registry         │  give instant base URL, auth, pagination
+└────────┬────────────┘
+         │ enriches
+         ▼
+┌─────────────────────┐
+│  2. LLM Discovery    │  Your LLM fills gaps: endpoints, rate limits,
+│                      │  API quirks. Unknown providers get full config.
+└────────┬────────────┘
+         │ validates
+         ▼
+┌─────────────────────┐
+│  3. HTTP Probing     │  Checks reachability, detects pagination
+│                      │  from response headers and body shape
+└────────┬────────────┘
+         │ connects
+         ▼
+┌─────────────────────┐
+│  4. Self-Healing     │  Rotates auth formats on 401/403.
+│     Connector        │  Resumes from last cursor after healing.
+└────────┬────────────┘
+         │ extracts
+         ▼
+┌─────────────────────┐
+│  5. Checkpointed     │  Saves cursor every 100 records.
+│     Extraction       │  Next run: resumes, doesn't replay.
+└─────────────────────┘
 ```
 
-The OpenAI-compatible provider works with OpenAI, Azure, Groq, Together, Mistral, DeepSeek, OpenRouter, Ollama, vLLM, and LM Studio. Keys are stored in the OS keychain, never on disk.
+---
 
-See [docs/how-to/configure-llm-providers.md](docs/how-to/configure-llm-providers.md) for full setup options.
+## Supported providers
+
+Known presets (demo accelerators — any API name works without them):
+
+| Provider | Category | Auth | Pagination |
+|----------|----------|------|------------|
+| MLflow | ML Experiment Tracking | None | Offset |
+| Weights & Biases | ML Experiment Tracking | API Key | Cursor |
+| Feast | Feature Store | None | Offset |
+| Prometheus | Observability / Monitoring | None | Offset |
+| Grafana | Observability / Dashboards | API Key | Offset |
+| Apache Airflow | Workflow Orchestration | Basic | Offset |
+| Prefect | Dataflow Automation | API Key | Offset |
+| GitHub | Version Control / CI/CD | OAuth2 | Link Header |
+| Linear | Issue Tracking | API Key | GraphQL Cursor |
+| Notion | Docs / Knowledge Base | OAuth2 | Cursor |
+
+Unknown providers fall through to LLM-driven discovery. Use `--base-url` for internal APIs:
+
+```bash
+pipeline source add my-feature-store --base-url https://features.internal.co
+```
+
+---
+
+## LLM provider (BYOK — bring your own key)
+
+| Provider | Recommended model | API key |
+|----------|------------------|---------|
+| OpenAI (default) | `gpt-4o` | `OPENAI_API_KEY` or `pipeline auth set openai` |
+| Anthropic | `claude-sonnet-4-20250514` | `ANTHROPIC_API_KEY` or `pipeline auth set anthropic` |
+| Ollama (local) | `llama3.2` | None needed |
+| Azure OpenAI | per deployment | `pipeline auth set openai` |
+| Groq, Together, vLLM, LM Studio | per model | Per service |
+
+The OpenAI-compatible provider works with any `/v1/chat/completions` endpoint. Local inference servers (Ollama, vLLM) need no API key.
+
+---
 
 ## Configuration
 
 | Env var | Default | Description |
 |---------|---------|-------------|
 | `PIPELINE_LLM_PROVIDER` | `openai` | LLM provider: `openai` or `anthropic` |
-| `PIPELINE_LLM_MODEL` | per-provider | Model ID (e.g. `gpt-4o`, `claude-sonnet-4-20250514`) |
-| `PIPELINE_LLM_BASE_URL` | per-provider | Override for Azure, Ollama, Groq, etc. |
+| `PIPELINE_LLM_MODEL` | per-provider | Model ID |
+| `PIPELINE_LLM_BASE_URL` | per-provider | Override for Azure, Ollama, Groq |
+| `PIPELINE_LOG_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `PIPELINE_DEFAULT_TIMEOUT` | `30` | HTTP request timeout in seconds |
+| `PIPELINE_MAX_RETRIES` | `3` | Maximum retry attempts for failed requests |
 
 All settings support `.env` files. See [docs/reference.md](docs/reference.md) for the complete list.
 
-## Development
+---
 
-```bash
-git clone https://github.com/Lanrey/zero-to-pipeline.git
-cd zero-to-pipeline
-uv sync --extra dev
+## Project structure
 
-# Tests
-pytest tests/ -v
-
-# Lint
-ruff check src/data_pipeline/
-
-# Type check
-mypy src/data_pipeline/
 ```
+src/data_pipeline/
+├── cli/                 # CLI commands (package, not a single file)
+│   ├── __init__.py      # Entry point, doctor, main()
+│   ├── source.py        # source add/list/remove/discover/test
+│   ├── auth.py          # auth login/set/status/revoke
+│   ├── sync.py          # sync run/status
+│   ├── chat.py          # Interactive AI assistant
+│   ├── docker.py        # Local Docker container management
+│   └── helpers.py       # Shared utilities, resolve_for_provider()
+├── connectors/          # API connectivity layer
+│   ├── base.py          # Universal REST/GraphQL connector
+│   ├── discovery.py     # HTTP probing, schema inference
+│   ├── llm_discovery.py # Model-agnostic LLM layer (BYOK)
+│   ├── registry.py      # Provider presets + name inference
+│   └── self_healing.py  # Auth rotation + pagination recovery
+├── auth/                # Credential storage
+│   ├── credential_store.py  # OS keychain + encrypted file fallback
+│   ├── device_flow.py       # OAuth 2.0 Device Authorization Flow
+│   └── manager.py           # Auth coordinator
+├── orchestrator/        # Pipeline execution
+│   ├── pipeline.py      # DAG pipeline builder
+│   ├── engine.py        # Async executor with retry
+│   └── checkpoint.py    # Cursor-based checkpoint persistence
+├── extractors/          # Orchestration-aware extraction
+├── loaders/             # JSONL output (extensible)
+├── schemas/             # Pydantic models
+├── sources/             # Source state persistence
+├── mcp/                 # Model Context Protocol server
+└── observability/       # Structured logging + metrics
+```
+
+---
 
 ## Documentation
 
@@ -129,6 +196,24 @@ mypy src/data_pipeline/
 | [How to add a new LLM provider](docs/how-to/add-llm-provider.md) | Contributor guide for extending the LLM layer |
 | [Reference](docs/reference.md) | All env vars, CLI commands, provider presets, interfaces |
 | [Architecture](docs/explanation.md) | How discovery, self-healing, and BYOK work under the hood |
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/Lanrey/zero-to-pipeline.git
+cd zero-to-pipeline
+uv sync --extra dev
+
+pytest tests/ -v          # 79 tests
+ruff check src/data_pipeline/   # zero lint errors
+mypy src/data_pipeline/         # type check
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full style guide (PEP 8) and pre-submit checklist.
+
+---
 
 ## License
 

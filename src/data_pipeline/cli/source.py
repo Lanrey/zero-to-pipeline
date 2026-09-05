@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from typing import Any
 
 import typer
 
@@ -17,6 +18,7 @@ from data_pipeline.schemas import (
     APIConfig,
     AuthType,
     ConnectionStatus,
+    InferredConfig,
     SourceConfig,
     SourceType,
 )
@@ -32,7 +34,7 @@ def source_add(
     auth_type: str | None = typer.Option(None, "--auth-type", help="Auth type override"),
     local: bool = typer.Option(False, "--local", help="Start a local Docker instance of this provider automatically"),
     force: bool = typer.Option(False, "--force", help="Force add even if source exists"),
-):
+) -> None:
     """Add a new data source. Works with ANY API \u2014 known or unknown."""
     store = SourceStore()
     slug = provider.lower().replace(" ", "-")
@@ -105,7 +107,7 @@ def source_add(
         show_auth_docs(provider, context="setup")
 
 
-def _resolve_local_config(provider: str) -> tuple[str, str, dict] | None:
+def _resolve_local_config(provider: str) -> tuple[str, str, dict[str, Any]] | None:
     """Resolve Docker-based local config for a provider, or ask LLM."""
     slug_lower = provider.lower()
     cfg = LOCAL_CONFIGS.get(slug_lower)
@@ -145,7 +147,7 @@ def _resolve_local_config(provider: str) -> tuple[str, str, dict] | None:
     console.print(f"\n[bold]Setting up {provider} locally[/bold]")
     console.print(f"[dim]  image: {image}[/dim]")
     console.print(f"[dim]  port:  {port}[/dim]")
-    note = cfg.note if cfg and cfg.note else (cfg_data.get("note") if not cfg and cfg_data else None)
+    note = cfg.note if cfg else None
     if note:
         console.print(f"[dim]  note:  {note}[/dim]")
 
@@ -156,7 +158,7 @@ def _resolve_local_config(provider: str) -> tuple[str, str, dict] | None:
     return resolved_url, inferred_auth, {}
 
 
-def _llm_enrich_config(provider: str, config) -> None:
+def _llm_enrich_config(provider: str, config: InferredConfig) -> None:
     """Enrich inferred config with LLM-discovered details."""
     from data_pipeline.connectors.llm_discovery import discover_provider_config
 
@@ -197,7 +199,7 @@ def _llm_enrich_config(provider: str, config) -> None:
 
 
 @source_app.command("list")
-def source_list():
+def source_list() -> None:
     """List your added data sources (persisted)."""
     from rich.table import Table
 
@@ -227,7 +229,7 @@ def source_list():
 
 
 @source_app.command("list-providers")
-def source_list_providers():
+def source_list_providers() -> None:
     """List known provider presets (available accelerators)."""
     from rich.table import Table
 
@@ -261,7 +263,7 @@ def source_list_providers():
 def source_remove(
     provider: str = typer.Argument(help="Provider to remove"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
-):
+) -> None:
     """Remove a data source from the pipeline."""
     store = SourceStore()
     slug = provider.lower().replace(" ", "-")
@@ -287,11 +289,11 @@ def source_remove(
 def source_discover(
     provider: str = typer.Argument(help="Provider to discover"),
     base_url: str | None = typer.Option(None, "--base-url", help="Base URL to probe"),
-):
+) -> None:
     """Probe an API to discover its endpoints and capabilities."""
     discovery = APIDiscovery(provider, base_url=base_url)
 
-    async def _discover():
+    async def _discover() -> dict[str, Any]:
         return await discovery.discover()
 
     with console.status(f"Discovering {provider} API..."):
@@ -314,13 +316,13 @@ def source_discover(
 def source_test(
     provider: str = typer.Argument(help="Provider to test connectivity"),
     base_url: str | None = typer.Option(None, "--base-url", help="Override base URL"),
-):
+) -> None:
     """Test connection to a data source."""
     import httpx as _httpx
 
     rc = resolve_for_provider(provider, base_url=base_url)
 
-    async def _test():
+    async def _test() -> bool:
         if rc.token and rc.auth_prefix:
             auth_value = f"{rc.auth_prefix} {rc.token}"
         elif rc.token:

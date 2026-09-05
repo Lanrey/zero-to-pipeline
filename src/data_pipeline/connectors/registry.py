@@ -57,7 +57,7 @@ class ProviderRegistry:
     Presets are demo accelerators — the system works without them.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._presets: dict[str, ProviderPreset] = {}
 
     def register(self, provider: str, preset: ProviderPreset) -> None:

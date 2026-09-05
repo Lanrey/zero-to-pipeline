@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 
@@ -27,7 +28,7 @@ class MetricsCollector:
     for downstream aggregation (Prometheus, Datadog, etc.).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._counters: dict[str, float] = defaultdict(float)
         self._gauges: dict[str, float] = {}
         self._histograms: dict[str, list[float]] = defaultdict(list)
@@ -45,7 +46,7 @@ class MetricsCollector:
         self._histograms[key].append(value)
 
     @contextmanager
-    def timer(self, name: str, **tags: str):
+    def timer(self, name: str, **tags: str) -> Generator[None, None, None]:
         """Context manager that records duration as a histogram value."""
         start = time.perf_counter()
         try:
