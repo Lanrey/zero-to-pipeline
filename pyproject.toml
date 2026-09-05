@@ -1,5 +1,5 @@
 [project]
-name = "zero-pipeline"
+name = "zero-to-pipeline"
 version = "1.0.0"
 description = "Zero to Pipeline: Self-configuring data ingestion framework"
 readme = "README.md"

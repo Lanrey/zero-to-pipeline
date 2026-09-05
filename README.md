@@ -29,7 +29,7 @@ Zero to Pipeline inverts the problem: **you say what to connect, and the framewo
 
 ```bash
 # Install (Python 3.11+)
-pip install zero-pipeline
+pip install zero-to-pipeline
 
 # Store your LLM API key (for auto-discovery)
 pipeline auth set openai --token sk-proj-...

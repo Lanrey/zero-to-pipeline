@@ -20,4 +20,4 @@ Initial release.
 - MCP (Model Context Protocol) server for AI tool integration
 - Docker auto-provisioning for local dev instances (`--local` flag)
 - Structured logging (structlog) and metrics collector
-- `pip install zero-pipeline` — single-command install, zero YAML or connector code needed
+- `pip install zero-to-pipeline` — single-command install, zero YAML or connector code needed

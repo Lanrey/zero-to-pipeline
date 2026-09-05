@@ -11,13 +11,13 @@ Connect to an API, store credentials securely, and extract data in under five mi
 ## Step 1 — Install zero-pipeline
 
 ```bash
-pip install zero-pipeline
+pip install zero-to-pipeline
 ```
 
 Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv add zero-pipeline
+uv add zero-to-pipeline
 ```
 
 Verify the installation:
