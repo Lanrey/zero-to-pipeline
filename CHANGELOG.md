@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1 (2026-09-05)
+
+### Documentation
+
+- Restructure README as Diátaxis landing page (tutorial, how-to, explanation, reference)
+- Add LICENSE file to repository
+- Fix README badges to live PyPI/GitHub shields
+
 ## 1.0.0 (2026-09-05)
 
 Initial release.
