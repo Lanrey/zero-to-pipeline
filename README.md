@@ -2,8 +2,10 @@
 
 **Self-configuring data ingestion — connect any API without writing connectors.**
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/zero-to-pipeline)](https://pypi.org/project/zero-to-pipeline/)
+[![PyPI version](https://img.shields.io/pypi/v/zero-to-pipeline)](https://pypi.org/project/zero-to-pipeline/)
+[![License: MIT](https://img.shields.io/pypi/l/zero-to-pipeline)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/github/actions/workflow/status/Lanrey/zero-to-pipeline/publish.yml?label=tests)](https://github.com/Lanrey/zero-to-pipeline/actions)
 
 Zero to Pipeline is a Python framework that turns any REST or GraphQL API into a data source in a single command. No connector classes, no YAML schemas, no pagination boilerplate. The framework uses an LLM (your own API key) to discover auth type, endpoints, and pagination style from a provider name — then extracts data with self-healing, checkpointed syncs.
 

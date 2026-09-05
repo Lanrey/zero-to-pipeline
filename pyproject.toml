@@ -40,6 +40,7 @@ Homepage = "https://github.com/Lanrey/zero-to-pipeline"
 Repository = "https://github.com/Lanrey/zero-to-pipeline"
 "Bug Tracker" = "https://github.com/Lanrey/zero-to-pipeline/issues"
 Documentation = "https://github.com/Lanrey/zero-to-pipeline/tree/main/docs"
+"Release Notes" = "https://github.com/Lanrey/zero-to-pipeline/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
