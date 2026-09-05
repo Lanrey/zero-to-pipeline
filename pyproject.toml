@@ -4,11 +4,14 @@ version = "1.0.0"
 description = "Zero to Pipeline: Self-configuring data ingestion framework"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
-    {name = "Olusola Akinsulere"},
+    {name = "Olusola Akinsulere", email = "olusola.akinsulere@gmail.com"},
 ]
-keywords = ["data-engineering", "etl", "pipeline", "connectors"]
+keywords = [
+    "data-engineering", "etl", "pipeline", "connectors",
+    "api", "data-ingestion", "llm", "data-pipeline",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -30,6 +33,12 @@ dependencies = [
     "keyring>=25.2",
     "cryptography>=42.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Lanrey/zero-to-pipeline"
+Repository = "https://github.com/Lanrey/zero-to-pipeline"
+"Bug Tracker" = "https://github.com/Lanrey/zero-to-pipeline/issues"
+Documentation = "https://github.com/Lanrey/zero-to-pipeline/tree/main/docs"
 
 [project.optional-dependencies]
 dev = [
@@ -55,6 +64,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+data_pipeline = ["py.typed"]
 
 [tool.uv]
 package = true
